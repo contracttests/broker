@@ -1,0 +1,205 @@
+{
+  "api": {
+    "name": "catalog-service"
+  },
+  "provides": {
+    "rest": {
+      "/products": {
+        "get": {
+          "responses": {
+            "200": "Products"
+          }
+        },
+        "post": {
+          "requestBody": "CreateProduct",
+          "responses": {
+            "201": "Product",
+            "400": "BadRequest"
+          }
+        }
+      },
+      "/products/{uuid}": {
+        "get": {
+          "responses": {
+            "200": "Product",
+            "404": "NotFound"
+          }
+        },
+        "put": {
+          "requestBody": "UpdateProduct",
+          "responses": {
+            "200": "Product",
+            "400": "BadRequest",
+            "404": "NotFound"
+          }
+        }
+      }
+    }
+  },
+  "consumes": {
+    "payments-service": {
+      "rest": {
+        "/payments": {
+          "post": {
+            "requestBody": "CreatePayment",
+            "responses": {
+              "201": "Payment",
+              "400": "BadRequest"
+            }
+          }
+        }
+      }
+    },
+    "users-service": {
+      "rest": {
+        "/users/{uuid}": {
+          "get": {
+            "200": "User",
+            "404": "NotFound"
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "Product": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number"
+        },
+        "stock": {
+          "type": "integer"
+        },
+        "category": {
+          "type": "string"
+        }
+      }
+    },
+    "Products": {
+      "type": "array",
+      "items": {
+        "$ref": "Product"
+      }
+    },
+    "CreateProduct": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number"
+        },
+        "stock": {
+          "type": "integer"
+        },
+        "category": {
+          "type": "string"
+        }
+      }
+    },
+    "UpdateProduct": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number"
+        },
+        "stock": {
+          "type": "integer"
+        },
+        "category": {
+          "type": "string"
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        }
+      }
+    },
+    "Payment": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "orderId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "CreatePayment": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "orderId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        }
+      }
+    },
+    "BadRequest": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "NotFound": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
