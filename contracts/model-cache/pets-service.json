@@ -1,0 +1,378 @@
+{
+    "schemas": {
+        "2ec289f97c524b68f5da962484cf6b0162d4f7a8d306354f912ec77603849858": {
+            "hash": "2ec289f97c524b68f5da962484cf6b0162d4f7a8d306354f912ec77603849858",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.age": {
+                    "path": "root.age",
+                    "type": "integer"
+                },
+                "root.breed": {
+                    "path": "root.breed",
+                    "type": "string"
+                },
+                "root.name": {
+                    "path": "root.name",
+                    "type": "string"
+                },
+                "root.ownerUuid": {
+                    "path": "root.ownerUuid",
+                    "type": "string"
+                },
+                "root.uuid": {
+                    "path": "root.uuid",
+                    "type": "string"
+                }
+            }
+        },
+        "322b19c0521ffb76e9a40712e3f174a3a082d9168f6641e68182267d6a3d98fb": {
+            "hash": "322b19c0521ffb76e9a40712e3f174a3a082d9168f6641e68182267d6a3d98fb",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.age": {
+                    "path": "root.age",
+                    "type": "integer"
+                },
+                "root.breed": {
+                    "path": "root.breed",
+                    "type": "string"
+                },
+                "root.name": {
+                    "path": "root.name",
+                    "type": "string"
+                },
+                "root.ownerUuid": {
+                    "path": "root.ownerUuid",
+                    "type": "string"
+                },
+                "root.uuid": {
+                    "path": "root.uuid",
+                    "type": "string"
+                }
+            }
+        },
+        "472d163c16f80377b4c37f78dca0d713202bf7b82fef90aa5c879a97631b663b": {
+            "hash": "472d163c16f80377b4c37f78dca0d713202bf7b82fef90aa5c879a97631b663b",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.message": {
+                    "path": "root.message",
+                    "type": "string"
+                }
+            }
+        },
+        "8f4d15d912d4b9019dbb04cb9d38d6398670a6e43938633b72da391ee41af2e8": {
+            "hash": "8f4d15d912d4b9019dbb04cb9d38d6398670a6e43938633b72da391ee41af2e8",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.message": {
+                    "path": "root.message",
+                    "type": "string"
+                }
+            }
+        },
+        "90ca43532826fa302bf6ba27f8fad9ec4f952cc8fdffe9197248899c8992f7f0": {
+            "hash": "90ca43532826fa302bf6ba27f8fad9ec4f952cc8fdffe9197248899c8992f7f0",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.age": {
+                    "path": "root.age",
+                    "type": "integer"
+                },
+                "root.breed": {
+                    "path": "root.breed",
+                    "type": "string"
+                },
+                "root.name": {
+                    "path": "root.name",
+                    "type": "string"
+                },
+                "root.ownerUuid": {
+                    "path": "root.ownerUuid",
+                    "type": "string"
+                },
+                "root.uuid": {
+                    "path": "root.uuid",
+                    "type": "string"
+                }
+            }
+        },
+        "9414aaa05ff971934f0ba0af1e31085281794812ce2fd00381db85a7ca5413e3": {
+            "hash": "9414aaa05ff971934f0ba0af1e31085281794812ce2fd00381db85a7ca5413e3",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.message": {
+                    "path": "root.message",
+                    "type": "string"
+                }
+            }
+        },
+        "9b95e7ebe8bcec8fb0b4cb2836cc973aa3ed0633c6fc93de144764857227d60b": {
+            "hash": "9b95e7ebe8bcec8fb0b4cb2836cc973aa3ed0633c6fc93de144764857227d60b",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.age": {
+                    "path": "root.age",
+                    "type": "integer"
+                },
+                "root.breed": {
+                    "path": "root.breed",
+                    "type": "string"
+                },
+                "root.name": {
+                    "path": "root.name",
+                    "type": "string"
+                },
+                "root.ownerUuid": {
+                    "path": "root.ownerUuid",
+                    "type": "string"
+                }
+            }
+        },
+        "ae1a6659f2bb5d837b0e87f39f38a48fac6d8f419dab5792f9320eaa12971fff": {
+            "hash": "ae1a6659f2bb5d837b0e87f39f38a48fac6d8f419dab5792f9320eaa12971fff",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.message": {
+                    "path": "root.message",
+                    "type": "string"
+                }
+            }
+        },
+        "bfe84c1235f42564b655a3ca5165776fa1d7785f66b876f375bfb1d1b334b43a": {
+            "hash": "bfe84c1235f42564b655a3ca5165776fa1d7785f66b876f375bfb1d1b334b43a",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.uuid": {
+                    "path": "root.uuid",
+                    "type": "string"
+                }
+            }
+        },
+        "d0a36c656bcbf7a5ebe6a23eaaac8696ebab2cc8d07496a7365a99c3318f2d31": {
+            "hash": "d0a36c656bcbf7a5ebe6a23eaaac8696ebab2cc8d07496a7365a99c3318f2d31",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "array"
+                },
+                "root[]": {
+                    "path": "root[]",
+                    "type": "object"
+                },
+                "root[].age": {
+                    "path": "root[].age",
+                    "type": "integer"
+                },
+                "root[].breed": {
+                    "path": "root[].breed",
+                    "type": "string"
+                },
+                "root[].name": {
+                    "path": "root[].name",
+                    "type": "string"
+                },
+                "root[].ownerUuid": {
+                    "path": "root[].ownerUuid",
+                    "type": "string"
+                },
+                "root[].uuid": {
+                    "path": "root[].uuid",
+                    "type": "string"
+                }
+            }
+        },
+        "e421e281503a9079f5711e646fccc855d501a511644ca12436bcf82b5cd64bd8": {
+            "hash": "e421e281503a9079f5711e646fccc855d501a511644ca12436bcf82b5cd64bd8",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.message": {
+                    "path": "root.message",
+                    "type": "string"
+                }
+            }
+        },
+        "fe807f6ea00d9168b21d973d71ab592e4a1d3a8e83582242ddd6c0b10d8cb87d": {
+            "hash": "fe807f6ea00d9168b21d973d71ab592e4a1d3a8e83582242ddd6c0b10d8cb87d",
+            "properties": {
+                "root": {
+                    "path": "root",
+                    "type": "object"
+                },
+                "root.age": {
+                    "path": "root.age",
+                    "type": "integer"
+                },
+                "root.breed": {
+                    "path": "root.breed",
+                    "type": "string"
+                },
+                "root.name": {
+                    "path": "root.name",
+                    "type": "string"
+                },
+                "root.ownerUuid": {
+                    "path": "root.ownerUuid",
+                    "type": "string"
+                },
+                "root.uuid": {
+                    "path": "root.uuid",
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "restResources": [
+        {
+            "uniqueHash": "bfe84c1235f42564b655a3ca5165776fa1d7785f66b876f375bfb1d1b334b43a",
+            "providerHash": "db365170acb7965a51da6b42366a32034e2627e859278e951b2c2830214b2e82",
+            "consumerName": "pets-service",
+            "providerName": "users-service",
+            "endpoint": "/users/{uuid}",
+            "method": "get",
+            "statusCode": "200",
+            "direction": "response",
+            "type": "consumer"
+        },
+        {
+            "uniqueHash": "8f4d15d912d4b9019dbb04cb9d38d6398670a6e43938633b72da391ee41af2e8",
+            "providerHash": "86d9d69d68c4665649c0fbf3815c35ec17cb280dbfdddc1d8e8101a0651e4338",
+            "consumerName": "pets-service",
+            "providerName": "users-service",
+            "endpoint": "/users/{uuid}",
+            "method": "get",
+            "statusCode": "404",
+            "direction": "response",
+            "type": "consumer"
+        },
+        {
+            "uniqueHash": "d0a36c656bcbf7a5ebe6a23eaaac8696ebab2cc8d07496a7365a99c3318f2d31",
+            "providerHash": "d0a36c656bcbf7a5ebe6a23eaaac8696ebab2cc8d07496a7365a99c3318f2d31",
+            "providerName": "pets-service",
+            "endpoint": "/pets",
+            "method": "get",
+            "statusCode": "200",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "9b95e7ebe8bcec8fb0b4cb2836cc973aa3ed0633c6fc93de144764857227d60b",
+            "providerHash": "9b95e7ebe8bcec8fb0b4cb2836cc973aa3ed0633c6fc93de144764857227d60b",
+            "providerName": "pets-service",
+            "endpoint": "/pets",
+            "method": "post",
+            "direction": "requestBody",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "90ca43532826fa302bf6ba27f8fad9ec4f952cc8fdffe9197248899c8992f7f0",
+            "providerHash": "90ca43532826fa302bf6ba27f8fad9ec4f952cc8fdffe9197248899c8992f7f0",
+            "providerName": "pets-service",
+            "endpoint": "/pets",
+            "method": "post",
+            "statusCode": "201",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "e421e281503a9079f5711e646fccc855d501a511644ca12436bcf82b5cd64bd8",
+            "providerHash": "e421e281503a9079f5711e646fccc855d501a511644ca12436bcf82b5cd64bd8",
+            "providerName": "pets-service",
+            "endpoint": "/pets",
+            "method": "post",
+            "statusCode": "400",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "fe807f6ea00d9168b21d973d71ab592e4a1d3a8e83582242ddd6c0b10d8cb87d",
+            "providerHash": "fe807f6ea00d9168b21d973d71ab592e4a1d3a8e83582242ddd6c0b10d8cb87d",
+            "providerName": "pets-service",
+            "endpoint": "/pets/{uuid}",
+            "method": "get",
+            "statusCode": "200",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "ae1a6659f2bb5d837b0e87f39f38a48fac6d8f419dab5792f9320eaa12971fff",
+            "providerHash": "ae1a6659f2bb5d837b0e87f39f38a48fac6d8f419dab5792f9320eaa12971fff",
+            "providerName": "pets-service",
+            "endpoint": "/pets/{uuid}",
+            "method": "get",
+            "statusCode": "404",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "322b19c0521ffb76e9a40712e3f174a3a082d9168f6641e68182267d6a3d98fb",
+            "providerHash": "322b19c0521ffb76e9a40712e3f174a3a082d9168f6641e68182267d6a3d98fb",
+            "providerName": "pets-service",
+            "endpoint": "/pets/{uuid}",
+            "method": "put",
+            "direction": "requestBody",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "9414aaa05ff971934f0ba0af1e31085281794812ce2fd00381db85a7ca5413e3",
+            "providerHash": "9414aaa05ff971934f0ba0af1e31085281794812ce2fd00381db85a7ca5413e3",
+            "providerName": "pets-service",
+            "endpoint": "/pets/{uuid}",
+            "method": "put",
+            "statusCode": "404",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "2ec289f97c524b68f5da962484cf6b0162d4f7a8d306354f912ec77603849858",
+            "providerHash": "2ec289f97c524b68f5da962484cf6b0162d4f7a8d306354f912ec77603849858",
+            "providerName": "pets-service",
+            "endpoint": "/pets/{uuid}",
+            "method": "put",
+            "statusCode": "200",
+            "direction": "response",
+            "type": "provider"
+        },
+        {
+            "uniqueHash": "472d163c16f80377b4c37f78dca0d713202bf7b82fef90aa5c879a97631b663b",
+            "providerHash": "472d163c16f80377b4c37f78dca0d713202bf7b82fef90aa5c879a97631b663b",
+            "providerName": "pets-service",
+            "endpoint": "/pets/{uuid}",
+            "method": "put",
+            "statusCode": "400",
+            "direction": "response",
+            "type": "provider"
+        }
+    ]
+}

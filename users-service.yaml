@@ -1,0 +1,67 @@
+api:
+  name: users-service
+
+provides:
+  rest:
+    "/users":
+      get:
+        responses:
+          '200': Users
+      post:
+        requestBody: CreateUser
+        responses:
+          '201': User
+          '400': BadRequest
+    "/users/{uuid}":
+      get:
+        responses:
+          '200': User
+          '404': NotFound
+      put:
+        requestBody: UpdateUser
+        responses:
+          '200': User
+          '400': BadRequest
+          '404': NotFound
+
+schemas:
+  User:
+    type: object
+    properties:
+      uuid:
+        type: string
+      email:
+        type: string
+
+  Users:
+    type: array
+    items:
+      "$ref": User
+
+  CreateUser:
+    type: object
+    properties:
+      name:
+        type: string
+      email:
+        type: string
+
+  UpdateUser:
+    type: object
+    properties:
+      uuid:
+        type: string
+      name:
+        type: string
+      email:
+        type: string
+  BadRequest:
+    type: object
+    properties:
+      message:
+        type: string
+  NotFound:
+    type: object
+    properties:
+      message:
+        type: string

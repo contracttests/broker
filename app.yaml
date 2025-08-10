@@ -1,0 +1,133 @@
+api:
+  name: app
+
+consumes:
+  users-service: 
+    rest:
+      "/users":
+        get:
+          responses:
+            '200': Users
+        post:
+          requestBody: CreateUser
+          responses:
+            '201': User
+            '400': BadRequest
+      "/users/{uuid}":
+        get:
+          responses:
+            '200': User
+            '404': NotFound
+        put:
+          requestBody: UpdateUser
+          responses:
+            '200': User
+            '400': BadRequest
+            '404': NotFound
+
+  pets-service:
+    rest:
+      "/pets":
+        get:
+          responses:
+            '200': Pets
+        post:
+          requestBody: CreatePet
+          responses:
+            '201': Pet
+            '400': BadRequest
+      "/pets/{uuid}":
+        get:
+          responses:
+            '200': Pet
+            '404': NotFound
+        put:
+          requestBody: UpdatePet
+          responses:
+            '200': Pet
+            '400': BadRequest
+            '404': NotFound
+
+schemas:
+  User:
+    type: object
+    properties:
+      uuid:
+        type: string
+      email:
+        type: string
+
+  Users:
+    type: array
+    items:
+      "$ref": User
+
+  CreateUser:
+    type: object
+    properties:
+      name:
+        type: string
+
+  UpdateUser:
+    type: object
+    properties:
+      uuid:
+        type: string
+      name:
+        type: string
+  Pet:
+    type: object
+    properties:
+      uuid:
+        type: string
+      name:
+        type: string
+      age:
+        type: integer
+      breed:
+        type: string
+      ownerUuid:
+        type: string
+
+  Pets:
+    type: array
+    items:
+      "$ref": Pet
+
+  CreatePet:
+    type: object
+    properties:
+      name:
+        type: string
+      age:
+        type: integer
+      breed:
+        type: string
+      ownerUuid:
+        type: string
+
+  UpdatePet:
+    type: object
+    properties:
+      uuid:
+        type: string
+      name:
+        type: string
+      age:
+        type: integer
+      breed:
+        type: string
+      ownerUuid:
+        type: string
+
+  BadRequest:
+    type: object
+    properties:
+      message:
+        type: string
+
+  NotFound:
+    type: object
+    properties:
+      message:
+        type: string
