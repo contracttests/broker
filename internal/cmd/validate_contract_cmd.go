@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/contracttests/broker/internal/dsl"
-	"github.com/contracttests/broker/internal/flat"
-	"github.com/contracttests/broker/internal/model"
 	"github.com/contracttests/broker/internal/tool"
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
@@ -37,9 +35,8 @@ var ValidateContractCmd = &cobra.Command{
 			log.Fatalf("Contract filename must match with the contract name: %s", contractDsl.Api.Name)
 		}
 
-		contractFlat := flat.Contract(contractDsl)
-
-		contractModel := model.NewContract(contractFlat)
+		contractFlat := contractDsl.ToFlatContract()
+		contractModel := contractFlat.ToModelContract()
 
 		hasError := tool.ValidateContract(contractModel)
 

@@ -1,7 +1,9 @@
 package flat
 
 import (
-	"github.com/contracttests/broker/internal/dsl"
+	"strings"
+
+	"github.com/contracttests/broker/internal/model"
 )
 
 type FlatContract struct {
@@ -9,12 +11,23 @@ type FlatContract struct {
 	Schemas   FlatSchemas
 }
 
-func Contract(contractDsl dsl.Contract) FlatContract {
-	flatResources := Resources(contractDsl)
-	flatSchemas := Schemas(contractDsl)
-
-	return FlatContract{
-		Resources: flatResources,
-		Schemas:   flatSchemas,
+func (flatContract FlatContract) ToModelContract() model.Contract {
+	contract := model.Contract{
+		RestResources: []model.RestResource{},
+		Schemas:       make(map[string]model.Schema),
 	}
+
+	for _, flatResource := range flatContract.Resources {
+		if strings.Contains(flatResource.FullPath, "rest") {
+			resource := NewRestResource(flatResource)
+			contract.RestResources = append(contract.RestResources, resource)
+
+			flatSchema := flatContract.Schemas[flatResource.SchemaName]
+
+			schema := NewSchema(resource.UniqueHash, flatSchema)
+			contract.Schemas[resource.UniqueHash] = schema
+		}
+	}
+
+	return contract
 }

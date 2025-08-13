@@ -8,8 +8,6 @@ type Schema struct {
 	Ref         string            `json:"$ref,omitzero"`
 }
 
-type Schemas map[string]Schema
-
 func (s *Schema) IsObject() bool {
 	if s.Type != "" {
 		return s.Type == "object"

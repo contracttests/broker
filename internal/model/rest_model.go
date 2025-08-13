@@ -1,11 +1,5 @@
 package model
 
-import (
-	"strings"
-
-	"github.com/contracttests/broker/internal/flat"
-)
-
 type RestResource struct {
 	UniqueHash   string `json:"uniqueHash,omitzero"`
 	ProviderHash string `json:"providerHash,omitzero"`
@@ -44,33 +38,6 @@ func (rr *RestResource) IsRequestBody() bool {
 
 func (rr *RestResource) IsResponse() bool {
 	return rr.Direction == "response"
-}
-
-func NewRestResource(
-	resource flat.FlatResource,
-) RestResource {
-	parts := strings.Split(resource.FullPath, ";")
-
-	if strings.Contains(resource.FullPath, "consumes") {
-		if strings.Contains(resource.FullPath, "requestBody") {
-			consumerName, providerName, endpoint, method := parts[0], parts[2], parts[4], parts[5]
-
-			return NewConsumerRestRequestBody(consumerName, providerName, endpoint, method)
-		}
-
-		consumerName, providerName, endpoint, method, statusCode := parts[0], parts[2], parts[4], parts[5], parts[7]
-
-		return NewConsumerRestResponse(consumerName, providerName, endpoint, method, statusCode)
-	}
-	if strings.Contains(resource.FullPath, "requestBody") {
-		providerName, endpoint, method := parts[0], parts[3], parts[4]
-
-		return NewProviderRestRequestBody(providerName, endpoint, method)
-	}
-
-	providerName, endpoint, method, statusCode := parts[0], parts[3], parts[4], parts[6]
-
-	return NewProviderRestResponse(providerName, endpoint, method, statusCode)
 }
 
 func NewConsumerRestRequestBody(

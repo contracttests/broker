@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/contracttests/broker/internal/dsl"
-	"github.com/contracttests/broker/internal/flat"
 	"github.com/contracttests/broker/internal/model"
 	"github.com/ghodss/yaml"
 )
@@ -69,7 +68,7 @@ func LoadValidatedContracts() {
 			log.Fatal(err)
 		}
 
-		contractModel := model.NewContract(flat.Contract(contractDsl))
+		contractModel := contractDsl.ToFlatContract().ToModelContract()
 		SaveContract(contractModel)
 
 		contractModelCacheContent, err := json.Marshal(contractModel)

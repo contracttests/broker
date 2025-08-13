@@ -103,7 +103,7 @@ schemas:
         type: integer
       breed:
         type: string
-      ownerUuid:
+      owner:
         type: string
 
   UpdatePet:
