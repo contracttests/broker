@@ -24,7 +24,11 @@ type ResourcePath string
 func (f *ResourcePath) Append(parts ...string) ResourcePath {
 	separator := ";"
 
-	return ResourcePath(strings.Join([]string{f.String(), strings.Join(parts, separator)}, separator))
+	if string(*f) == "" {
+		return ResourcePath(strings.Join(parts, separator))
+	}
+
+	return ResourcePath(strings.Join([]string{string(*f), strings.Join(parts, separator)}, separator))
 }
 
 func (f *ResourcePath) String() string {
@@ -36,7 +40,15 @@ type PropertyPath string
 func (f *PropertyPath) Append(parts ...string) PropertyPath {
 	separator := "."
 
-	return PropertyPath(strings.Join([]string{f.String(), strings.Join(parts, separator)}, separator))
+	if string(*f) == "" {
+		return PropertyPath(strings.Join(parts, separator))
+	}
+
+	return PropertyPath(strings.Join([]string{string(*f), strings.Join(parts, separator)}, separator))
+}
+
+func (f *PropertyPath) AppendArray() PropertyPath {
+	return PropertyPath(f.String() + "[]")
 }
 
 func (f *PropertyPath) String() string {
@@ -54,47 +66,41 @@ func (c *Contract) ToContractModel() model.Contract {
 	}
 }
 
-func newResourceFullPath(parts ...string) string {
-	resourceParthSeparator := ";"
-
-	return strings.Join(parts, resourceParthSeparator)
-}
-
 func Resources(contractDsl Contract) []model.Resource {
-	return buildResources([]model.Resource{}, "", contractDsl)
+	return buildResources([]model.Resource{}, ResourcePath(""), contractDsl)
 }
 
-func buildResources(flatResources []model.Resource, fullPath string, unknown any) []model.Resource {
+func buildResources(flatResources []model.Resource, resourcePath ResourcePath, unknown any) []model.Resource {
 	switch unknown := unknown.(type) {
 	case Contract:
-		fullPath = newFullPath(fullPath, unknown.Api.Name)
+		resourcePath = resourcePath.Append(unknown.Api.Name)
 
 		for serviceName, consumes := range unknown.ConsumesServices {
-			newFullPath := newResourceFullPath(fullPath, "consumes", serviceName)
+			newFullPath := resourcePath.Append("consumes", serviceName)
 			flatResources = buildResources(flatResources, newFullPath, consumes)
 		}
 
-		newFullPath := newResourceFullPath(fullPath, "provides")
+		newFullPath := resourcePath.Append("provides")
 		flatResources = buildResources(flatResources, newFullPath, unknown.Provides)
 
 		return flatResources
 
 	case Consumes:
-		flatResources = buildResources(flatResources, fullPath, unknown.Rest)
-		flatResources = buildResources(flatResources, fullPath, unknown.Message)
+		flatResources = buildResources(flatResources, resourcePath, unknown.Rest)
+		flatResources = buildResources(flatResources, resourcePath, unknown.Message)
 
 		return flatResources
 
 	case Provides:
-		flatResources = buildResources(flatResources, fullPath, unknown.Rest)
-		flatResources = buildResources(flatResources, fullPath, unknown.Message)
+		flatResources = buildResources(flatResources, resourcePath, unknown.Rest)
+		flatResources = buildResources(flatResources, resourcePath, unknown.Message)
 
 		return flatResources
 
 	case Message:
 		for messageName, schemaName := range unknown {
-			newFullPath := newResourceFullPath(fullPath, "message", messageName)
-			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(schemaName)))
+			newFullPath := resourcePath.Append("message", messageName)
+			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(schemaName)))
 		}
 
 		return flatResources
@@ -102,89 +108,70 @@ func buildResources(flatResources []model.Resource, fullPath string, unknown any
 	case Rest:
 		for endpoint, methods := range unknown {
 			if methods.Get.IsNonZero() {
-				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
+				newFullPath := resourcePath.Append("rest", endpoint)
 				flatResources = buildResources(flatResources, newFullPath, methods.Get)
 			}
 
 			if methods.Post.IsNonZero() {
-				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
+				newFullPath := resourcePath.Append("rest", endpoint)
 				flatResources = buildResources(flatResources, newFullPath, methods.Post)
 			}
 
 			if methods.Put.IsNonZero() {
-				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
+				newFullPath := resourcePath.Append("rest", endpoint)
 				flatResources = buildResources(flatResources, newFullPath, methods.Put)
 			}
 
 			if methods.Delete.IsNonZero() {
-				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
+				newFullPath := resourcePath.Append("rest", endpoint)
 				flatResources = buildResources(flatResources, newFullPath, methods.Delete)
 			}
 		}
 
 	case GetMethod:
-		newFullPath := newResourceFullPath(fullPath, "get", "responses")
+		newFullPath := resourcePath.Append("get", "responses")
 		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case PostMethod:
 		if unknown.HasRequestBody() {
-			newFullPath := newResourceFullPath(fullPath, "post", "request")
-			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(unknown.RequestBody)))
+			newFullPath := resourcePath.Append("post", "request")
+			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(unknown.RequestBody)))
 		}
 
-		newFullPath := newResourceFullPath(fullPath, "post", "responses")
+		newFullPath := resourcePath.Append("post", "responses")
 		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case PutMethod:
 		if unknown.HasRequestBody() {
-			newFullPath := newResourceFullPath(fullPath, "put", "request")
-			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(unknown.RequestBody)))
+			newFullPath := resourcePath.Append("put", "request")
+			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(unknown.RequestBody)))
 		}
 
-		newFullPath := newResourceFullPath(fullPath, "put", "responses")
+		newFullPath := resourcePath.Append("put", "responses")
 		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case DeleteMethod:
-		newFullPath := newResourceFullPath(fullPath, "delete", "responses")
+		newFullPath := resourcePath.Append("delete", "responses")
 		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case Responses:
 		for statusCode, schemaName := range unknown {
-			newFullPath := newResourceFullPath(fullPath, strconv.Itoa(statusCode))
-			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(schemaName)))
+			newFullPath := resourcePath.Append(strconv.Itoa(statusCode))
+			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(schemaName)))
 		}
 
 		return flatResources
 	}
 
 	return flatResources
-}
-
-func newFullPath(parts ...string) string {
-	sanitizedParts := []string{}
-	for _, part := range parts {
-		if part != "" {
-			sanitizedParts = append(sanitizedParts, part)
-		}
-	}
-
-	if len(sanitizedParts) == 1 {
-		return sanitizedParts[0]
-	}
-
-	return strings.Join(sanitizedParts, ".")
-}
-
-func newArrayPropertyPath(part string) string {
-	return part + "[]"
 }
 
 func Schemas(contractDsl Contract) map[string]model.Schema {
@@ -201,7 +188,7 @@ func Schemas(contractDsl Contract) map[string]model.Schema {
 				Hash:       hash,
 				Properties: make(map[string]model.Property),
 			},
-			"root",
+			PropertyPath("root"),
 			schema,
 		)
 
@@ -216,7 +203,7 @@ func buildSchema(
 	originalSchemaName string,
 	schemas map[string]Schema,
 	schema model.Schema,
-	fullPath string,
+	propertyPath PropertyPath,
 	unknown any,
 ) model.Schema {
 	if deep >= 10 {
@@ -226,8 +213,8 @@ func buildSchema(
 	switch unknown := unknown.(type) {
 	case Schema:
 		if unknown.IsObject() {
-			schema.Properties[fullPath] = model.Property{
-				Path: fullPath,
+			schema.Properties[propertyPath.String()] = model.Property{
+				Path: propertyPath.String(),
 				Type: "object",
 			}
 
@@ -237,7 +224,7 @@ func buildSchema(
 					originalSchemaName,
 					schemas,
 					schema,
-					newFullPath(fullPath, name),
+					propertyPath.Append(name),
 					schemaProperties,
 				)
 			}
@@ -246,8 +233,8 @@ func buildSchema(
 		}
 
 		if unknown.IsArray() {
-			schema.Properties[fullPath] = model.Property{
-				Path: fullPath,
+			schema.Properties[propertyPath.String()] = model.Property{
+				Path: propertyPath.String(),
 				Type: "array",
 			}
 
@@ -256,7 +243,7 @@ func buildSchema(
 				originalSchemaName,
 				schemas,
 				schema,
-				newArrayPropertyPath(fullPath),
+				propertyPath.AppendArray(),
 				unknown.Items,
 			)
 
@@ -264,8 +251,8 @@ func buildSchema(
 		}
 
 		if unknown.IsPrimitive() {
-			schema.Properties[fullPath] = model.Property{
-				Path: fullPath,
+			schema.Properties[propertyPath.String()] = model.Property{
+				Path: propertyPath.String(),
 				Type: unknown.Type,
 			}
 
@@ -278,7 +265,7 @@ func buildSchema(
 				originalSchemaName,
 				schemas,
 				schema,
-				fullPath,
+				propertyPath,
 				schemas[unknown.Ref],
 			)
 
@@ -292,7 +279,7 @@ func buildSchema(
 			originalSchemaName,
 			schemas,
 			schema,
-			fullPath,
+			propertyPath,
 			*unknown,
 		)
 	default:
