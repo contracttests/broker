@@ -6,15 +6,15 @@ import (
 	"github.com/contracttests/broker/internal/model"
 )
 
-func PrintInvalidConsumerResource(consumerRestResource model.RestResource, providerRestResource model.RestResource, schemaDiff model.Schema) {
+func PrintInvalidConsumerResource(consumerRestResource model.Resource, providerRestResource model.Resource, schemaDiff model.Schema) {
 	fmt.Println("--------------------------------")
 	fmt.Printf("%s cannot provide at \n", consumerRestResource.ProviderName)
-	fmt.Printf("Endpoint: %s\n", consumerRestResource.Endpoint)
-	fmt.Printf("Method: %s\n", consumerRestResource.Method)
+	fmt.Printf("Endpoint: %s\n", consumerRestResource.RestResource.Endpoint)
+	fmt.Printf("Method: %s\n", consumerRestResource.RestResource.Method)
 	if consumerRestResource.IsRequestBody() {
 		fmt.Println("Request body: ")
 	} else {
-		fmt.Printf("Status Code: %s\n", consumerRestResource.StatusCode)
+		fmt.Printf("Status Code: %s\n", consumerRestResource.RestResource.StatusCode)
 		fmt.Println("Response:")
 	}
 
@@ -23,15 +23,15 @@ func PrintInvalidConsumerResource(consumerRestResource model.RestResource, provi
 	}
 }
 
-func PrintInvalidProviderResource(providerRestResource model.RestResource, consumerRestResource model.RestResource, schemaDiff model.Schema) {
+func PrintInvalidProviderResource(providerRestResource model.Resource, consumerRestResource model.Resource, schemaDiff model.Schema) {
 	fmt.Println("--------------------------------")
 	fmt.Printf("%s cannot be consume by %s \n", providerRestResource.ProviderName, consumerRestResource.ConsumerName)
-	fmt.Printf("Endpoint: %s\n", providerRestResource.Endpoint)
-	fmt.Printf("Method: %s\n", providerRestResource.Method)
+	fmt.Printf("Endpoint: %s\n", providerRestResource.RestResource.Endpoint)
+	fmt.Printf("Method: %s\n", providerRestResource.RestResource.Method)
 	if providerRestResource.IsRequestBody() {
 		fmt.Println("Request body: ")
 	} else {
-		fmt.Printf("Status Code: %s\n", providerRestResource.StatusCode)
+		fmt.Printf("Status Code: %s\n", providerRestResource.RestResource.StatusCode)
 		fmt.Println("Response:")
 	}
 

@@ -10,7 +10,7 @@ provides:
         responses:
           '200': Pets
       post:
-        requestBody: CreatePet
+        request: CreatePet
         responses:
           '201': Pet
           '400': BadRequest
@@ -20,7 +20,7 @@ provides:
           '200': Pet
           '404': NotFound
       put:
-        requestBody: UpdatePet
+        request: UpdatePet
         responses:
           '200': Pet
           '400': BadRequest

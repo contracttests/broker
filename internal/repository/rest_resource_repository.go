@@ -2,19 +2,19 @@ package repository
 
 import "github.com/contracttests/broker/internal/model"
 
-var restResourcesMap = make(map[string]model.RestResource)
-var consumerRestResouce = make(map[string][]model.RestResource)
+var restResourcesMap = make(map[string]model.Resource)
+var consumerRestResouce = make(map[string][]model.Resource)
 
-func SaveRestResource(restResource model.RestResource) {
-	restResourcesMap[restResource.UniqueHash] = restResource
+func SaveRestResource(resource model.Resource) {
+	restResourcesMap[resource.Uuid] = resource
 
-	if restResource.IsConsumer() {
-		consumerRestResouce[restResource.ProviderHash] = append(consumerRestResouce[restResource.ProviderHash], restResource)
+	if resource.IsConsumer() {
+		consumerRestResouce[resource.ProviderUuid] = append(consumerRestResouce[resource.ProviderUuid], resource)
 	}
 }
 
-func GetRestResource(hash string) model.RestResource {
-	var restResource model.RestResource
+func GetResource(hash string) model.Resource {
+	var restResource model.Resource
 	if restResource, ok := restResourcesMap[hash]; ok {
 		return restResource
 	}
@@ -22,6 +22,6 @@ func GetRestResource(hash string) model.RestResource {
 	return restResource
 }
 
-func GetConsumerRestResources(providerHash string) []model.RestResource {
+func GetConsumerResources(providerHash string) []model.Resource {
 	return consumerRestResouce[providerHash]
 }

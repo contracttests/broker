@@ -22,7 +22,7 @@ func (g *GetMethod) IsNonZero() bool {
 }
 
 type PostMethod struct {
-	RequestBody string    `json:"requestBody,omitzero"`
+	RequestBody string    `json:"request,omitzero"`
 	Responses   Responses `json:"responses,omitzero"`
 }
 
@@ -35,7 +35,7 @@ func (p *PostMethod) IsNonZero() bool {
 }
 
 type PutMethod struct {
-	RequestBody string    `json:"requestBody,omitzero"`
+	RequestBody string    `json:"request,omitzero"`
 	Responses   Responses `json:"responses,omitzero"`
 }
 

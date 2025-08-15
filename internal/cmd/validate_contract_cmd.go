@@ -35,8 +35,14 @@ var ValidateContractCmd = &cobra.Command{
 			log.Fatalf("Contract filename must match with the contract name: %s", contractDsl.Api.Name)
 		}
 
-		contractFlat := contractDsl.ToFlatContract()
-		contractModel := contractFlat.ToModelContract()
+		contractModel := contractDsl.ToContractModel()
+
+		// content, err := json.Marshal(contractModel)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// fmt.Println(string(content))
+		// os.Exit(0)
 
 		hasError := tool.ValidateContract(contractModel)
 

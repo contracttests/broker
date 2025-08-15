@@ -9,7 +9,7 @@ consumes:
           responses:
             '200': Users
         post:
-          requestBody: CreateUser
+          request: CreateUser
           responses:
             '201': User
             '400': BadRequest
@@ -19,7 +19,7 @@ consumes:
             '200': User
             '404': NotFound
         put:
-          requestBody: UpdateUser
+          request: UpdateUser
           responses:
             '200': User
             '400': BadRequest
@@ -32,7 +32,7 @@ consumes:
           responses:
             '200': Pets
         post:
-          requestBody: CreatePet
+          request: CreatePet
           responses:
             '201': Pet
             '400': BadRequest
@@ -42,7 +42,7 @@ consumes:
             '200': Pet
             '404': NotFound
         put:
-          requestBody: UpdatePet
+          request: UpdatePet
           responses:
             '200': Pet
             '400': BadRequest
@@ -104,6 +104,8 @@ schemas:
       breed:
         type: string
       owner:
+        type: string
+      other: 
         type: string
 
   UpdatePet:

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contracttests/broker/internal/flat"
+	"github.com/contracttests/broker/internal/model"
 )
 
 type Api struct {
@@ -19,13 +19,38 @@ type Contract struct {
 	Schemas          map[string]Schema   `json:"schemas,omitzero"`
 }
 
-func (c *Contract) ToFlatContract() flat.FlatContract {
-	flatResources := Resources(*c)
-	flatSchemas := Schemas(*c)
+type ResourcePath string
 
-	return flat.FlatContract{
-		Resources: flatResources,
-		Schemas:   flatSchemas,
+func (f *ResourcePath) Append(parts ...string) ResourcePath {
+	separator := ";"
+
+	return ResourcePath(strings.Join([]string{f.String(), strings.Join(parts, separator)}, separator))
+}
+
+func (f *ResourcePath) String() string {
+	return string(*f)
+}
+
+type PropertyPath string
+
+func (f *PropertyPath) Append(parts ...string) PropertyPath {
+	separator := "."
+
+	return PropertyPath(strings.Join([]string{f.String(), strings.Join(parts, separator)}, separator))
+}
+
+func (f *PropertyPath) String() string {
+
+	return string(*f)
+}
+
+func (c *Contract) ToContractModel() model.Contract {
+	resources := Resources(*c)
+	schemas := Schemas(*c)
+
+	return model.Contract{
+		Resources: resources,
+		Schemas:   schemas,
 	}
 }
 
@@ -35,44 +60,41 @@ func newResourceFullPath(parts ...string) string {
 	return strings.Join(parts, resourceParthSeparator)
 }
 
-func Resources(contractDsl Contract) []flat.FlatResource {
-	return buildFlatResources([]flat.FlatResource{}, "", contractDsl)
+func Resources(contractDsl Contract) []model.Resource {
+	return buildResources([]model.Resource{}, "", contractDsl)
 }
 
-func buildFlatResources(flatResources []flat.FlatResource, fullPath string, unknown any) []flat.FlatResource {
+func buildResources(flatResources []model.Resource, fullPath string, unknown any) []model.Resource {
 	switch unknown := unknown.(type) {
 	case Contract:
-		fullPath = unknown.Api.Name
+		fullPath = newFullPath(fullPath, unknown.Api.Name)
 
 		for serviceName, consumes := range unknown.ConsumesServices {
 			newFullPath := newResourceFullPath(fullPath, "consumes", serviceName)
-			flatResources = buildFlatResources(flatResources, newFullPath, consumes)
+			flatResources = buildResources(flatResources, newFullPath, consumes)
 		}
 
 		newFullPath := newResourceFullPath(fullPath, "provides")
-		flatResources = buildFlatResources(flatResources, newFullPath, unknown.Provides)
+		flatResources = buildResources(flatResources, newFullPath, unknown.Provides)
 
 		return flatResources
 
 	case Consumes:
-		flatResources = buildFlatResources(flatResources, fullPath, unknown.Rest)
-		flatResources = buildFlatResources(flatResources, fullPath, unknown.Message)
+		flatResources = buildResources(flatResources, fullPath, unknown.Rest)
+		flatResources = buildResources(flatResources, fullPath, unknown.Message)
 
 		return flatResources
 
 	case Provides:
-		flatResources = buildFlatResources(flatResources, fullPath, unknown.Rest)
-		flatResources = buildFlatResources(flatResources, fullPath, unknown.Message)
+		flatResources = buildResources(flatResources, fullPath, unknown.Rest)
+		flatResources = buildResources(flatResources, fullPath, unknown.Message)
 
 		return flatResources
 
 	case Message:
 		for messageName, schemaName := range unknown {
 			newFullPath := newResourceFullPath(fullPath, "message", messageName)
-			flatResources = append(flatResources, flat.FlatResource{
-				FullPath:   newFullPath,
-				SchemaName: schemaName,
-			})
+			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(schemaName)))
 		}
 
 		return flatResources
@@ -81,72 +103,63 @@ func buildFlatResources(flatResources []flat.FlatResource, fullPath string, unkn
 		for endpoint, methods := range unknown {
 			if methods.Get.IsNonZero() {
 				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
-				flatResources = buildFlatResources(flatResources, newFullPath, methods.Get)
+				flatResources = buildResources(flatResources, newFullPath, methods.Get)
 			}
 
 			if methods.Post.IsNonZero() {
 				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
-				flatResources = buildFlatResources(flatResources, newFullPath, methods.Post)
+				flatResources = buildResources(flatResources, newFullPath, methods.Post)
 			}
 
 			if methods.Put.IsNonZero() {
 				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
-				flatResources = buildFlatResources(flatResources, newFullPath, methods.Put)
+				flatResources = buildResources(flatResources, newFullPath, methods.Put)
 			}
 
 			if methods.Delete.IsNonZero() {
 				newFullPath := newResourceFullPath(fullPath, "rest", endpoint)
-				flatResources = buildFlatResources(flatResources, newFullPath, methods.Delete)
+				flatResources = buildResources(flatResources, newFullPath, methods.Delete)
 			}
 		}
 
 	case GetMethod:
 		newFullPath := newResourceFullPath(fullPath, "get", "responses")
-		flatResources = buildFlatResources(flatResources, newFullPath, unknown.Responses)
+		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case PostMethod:
 		if unknown.HasRequestBody() {
-			newFullPath := newResourceFullPath(fullPath, "post", "requestBody")
-			flatResources = append(flatResources, flat.FlatResource{
-				FullPath:   newFullPath,
-				SchemaName: unknown.RequestBody,
-			})
+			newFullPath := newResourceFullPath(fullPath, "post", "request")
+			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(unknown.RequestBody)))
 		}
 
 		newFullPath := newResourceFullPath(fullPath, "post", "responses")
-		flatResources = buildFlatResources(flatResources, newFullPath, unknown.Responses)
+		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case PutMethod:
 		if unknown.HasRequestBody() {
-			newFullPath := newResourceFullPath(fullPath, "put", "requestBody")
-			flatResources = append(flatResources, flat.FlatResource{
-				FullPath:   newFullPath,
-				SchemaName: unknown.RequestBody,
-			})
+			newFullPath := newResourceFullPath(fullPath, "put", "request")
+			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(unknown.RequestBody)))
 		}
 
 		newFullPath := newResourceFullPath(fullPath, "put", "responses")
-		flatResources = buildFlatResources(flatResources, newFullPath, unknown.Responses)
+		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case DeleteMethod:
 		newFullPath := newResourceFullPath(fullPath, "delete", "responses")
-		flatResources = buildFlatResources(flatResources, newFullPath, unknown.Responses)
+		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
 
 		return flatResources
 
 	case Responses:
 		for statusCode, schemaName := range unknown {
 			newFullPath := newResourceFullPath(fullPath, strconv.Itoa(statusCode))
-			flatResources = append(flatResources, flat.FlatResource{
-				FullPath:   newFullPath,
-				SchemaName: schemaName,
-			})
+			flatResources = append(flatResources, model.NewResource(newFullPath, model.UuidFromStrings(schemaName)))
 		}
 
 		return flatResources
@@ -174,32 +187,38 @@ func newArrayPropertyPath(part string) string {
 	return part + "[]"
 }
 
-func Schemas(contractDsl Contract) flat.FlatSchemas {
-	flatSchemas := flat.FlatSchemas{}
+func Schemas(contractDsl Contract) map[string]model.Schema {
+	schemas := make(map[string]model.Schema)
 
 	for schemaName, schema := range contractDsl.Schemas {
-		flatSchema := buildFlatProperties(
+		hash := model.UuidFromStrings(schemaName)
+
+		schema := buildSchema(
 			0,
 			schemaName,
 			contractDsl.Schemas,
-			flat.FlatSchema{},
+			model.Schema{
+				Hash:       hash,
+				Properties: make(map[string]model.Property),
+			},
 			"root",
 			schema,
 		)
-		flatSchemas[schemaName] = flatSchema
+
+		schemas[hash] = schema
 	}
 
-	return flatSchemas
+	return schemas
 }
 
-func buildFlatProperties(
+func buildSchema(
 	deep int,
 	originalSchemaName string,
 	schemas map[string]Schema,
-	flatSchema flat.FlatSchema,
+	schema model.Schema,
 	fullPath string,
 	unknown any,
-) flat.FlatSchema {
+) model.Schema {
 	if deep >= 10 {
 		panic(fmt.Sprintf("Circular reference detected in the schema %s", originalSchemaName))
 	}
@@ -207,72 +226,72 @@ func buildFlatProperties(
 	switch unknown := unknown.(type) {
 	case Schema:
 		if unknown.IsObject() {
-			flatSchema = append(flatSchema, flat.FlatProperty{
-				FullPath: fullPath,
-				Type:     "object",
-			})
+			schema.Properties[fullPath] = model.Property{
+				Path: fullPath,
+				Type: "object",
+			}
 
-			for name, schema := range unknown.Properties {
-				flatSchema = buildFlatProperties(
+			for name, schemaProperties := range unknown.Properties {
+				schema = buildSchema(
 					deep+1,
 					originalSchemaName,
 					schemas,
-					flatSchema,
-					newFullPath(fullPath, name),
 					schema,
+					newFullPath(fullPath, name),
+					schemaProperties,
 				)
 			}
 
-			return flatSchema
+			return schema
 		}
 
 		if unknown.IsArray() {
-			flatSchema = append(flatSchema, flat.FlatProperty{
-				FullPath: fullPath,
-				Type:     "array",
-			})
+			schema.Properties[fullPath] = model.Property{
+				Path: fullPath,
+				Type: "array",
+			}
 
-			flatSchema = buildFlatProperties(
+			schema = buildSchema(
 				deep+1,
 				originalSchemaName,
 				schemas,
-				flatSchema,
+				schema,
 				newArrayPropertyPath(fullPath),
 				unknown.Items,
 			)
 
-			return flatSchema
+			return schema
 		}
 
 		if unknown.IsPrimitive() {
-			flatSchema = append(flatSchema, flat.FlatProperty{
-				FullPath: newFullPath(fullPath),
-				Type:     unknown.Type,
-			})
+			schema.Properties[fullPath] = model.Property{
+				Path: fullPath,
+				Type: unknown.Type,
+			}
 
-			return flatSchema
+			return schema
 		}
 
 		if unknown.IsRef() {
-			flatSchema = buildFlatProperties(
+			schema = buildSchema(
 				deep+1,
 				originalSchemaName,
 				schemas,
-				flatSchema,
+				schema,
 				fullPath,
 				schemas[unknown.Ref],
 			)
 
-			return flatSchema
+			return schema
 		}
 
-		return flatSchema
+		return schema
 	case *Schema:
-		return buildFlatProperties(
+		return buildSchema(
 			deep+1,
 			originalSchemaName,
 			schemas,
-			flatSchema,
+			schema,
 			fullPath,
 			*unknown,
 		)

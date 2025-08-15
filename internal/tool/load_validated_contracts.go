@@ -68,7 +68,7 @@ func LoadValidatedContracts() {
 			log.Fatal(err)
 		}
 
-		contractModel := contractDsl.ToFlatContract().ToModelContract()
+		contractModel := contractDsl.ToContractModel()
 		SaveContract(contractModel)
 
 		contractModelCacheContent, err := json.Marshal(contractModel)

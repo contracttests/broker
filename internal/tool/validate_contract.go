@@ -10,15 +10,15 @@ import (
 func ValidateContract(contract model.Contract) bool {
 	hasError := false
 
-	for _, restResource := range contract.RestResources {
+	for _, restResource := range contract.Resources {
 		if restResource.IsConsumer() {
-			providerRestResource := repository.GetRestResource(restResource.ProviderHash)
-			if providerRestResource.IsZero() {
+			providerResource := repository.GetResource(restResource.ProviderUuid)
+			if providerResource.IsZero() {
 				fmt.Println("Provider rest resource not found")
 			}
 
-			leftSchema := contract.Schemas[restResource.UniqueHash]
-			rightSchema := repository.GetSchema(providerRestResource.UniqueHash)
+			leftSchema := contract.Schemas[restResource.SchemaUuid]
+			rightSchema := repository.GetSchema(providerResource.SchemaUuid)
 
 			diff := SchemaDiff(leftSchema, rightSchema)
 
@@ -26,19 +26,19 @@ func ValidateContract(contract model.Contract) bool {
 				continue
 			}
 
-			PrintInvalidConsumerResource(restResource, providerRestResource, diff)
+			PrintInvalidConsumerResource(restResource, providerResource, diff)
 			hasError = true
 		}
 
 		if restResource.IsProvider() {
-			consumerRestResouces := repository.GetConsumerRestResources(restResource.ProviderHash)
-			if len(consumerRestResouces) == 0 {
+			consumerResources := repository.GetConsumerResources(restResource.ProviderUuid)
+			if len(consumerResources) == 0 {
 				continue
 			}
 
-			for _, consumerRestResource := range consumerRestResouces {
-				leftSchema := repository.GetSchema(consumerRestResource.UniqueHash)
-				rightSchema := contract.Schemas[restResource.UniqueHash]
+			for _, consumerRestResource := range consumerResources {
+				leftSchema := repository.GetSchema(consumerRestResource.SchemaUuid)
+				rightSchema := contract.Schemas[restResource.SchemaUuid]
 
 				diff := SchemaDiff(leftSchema, rightSchema)
 

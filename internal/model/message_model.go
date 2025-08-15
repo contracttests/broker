@@ -13,7 +13,7 @@ func NewMessageProducer(
 	topic string,
 	schemaName string,
 ) MessageResource {
-	hash := HashFromStrings(name, topic, schemaName)
+	hash := UuidFromStrings(name, topic, schemaName)
 
 	return MessageResource{
 		Hash:       hash,
@@ -29,7 +29,7 @@ func NewMessageConsumer(
 	topic string,
 	schemaName string,
 ) MessageResource {
-	hash := HashFromStrings(name, topic, schemaName)
+	hash := UuidFromStrings(name, topic, schemaName)
 
 	return MessageResource{
 		Hash:       hash,

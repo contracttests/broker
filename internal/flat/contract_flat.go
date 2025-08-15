@@ -1,33 +1,25 @@
 package flat
 
-import (
-	"strings"
-
-	"github.com/contracttests/broker/internal/model"
-)
-
 type FlatContract struct {
 	Resources []FlatResource
 	Schemas   FlatSchemas
 }
 
-func (flatContract FlatContract) ToModelContract() model.Contract {
-	contract := model.Contract{
-		RestResources: []model.RestResource{},
-		Schemas:       make(map[string]model.Schema),
-	}
+// func (flatContract FlatContract) ToModelContract() model.Contract {
+// 	contract := model.Contract{
+// 		Resources: []model.Resource{},
+// 		Schemas:   make(map[string]model.Schema),
+// 	}
 
-	for _, flatResource := range flatContract.Resources {
-		if strings.Contains(flatResource.FullPath, "rest") {
-			resource := NewRestResource(flatResource)
-			contract.RestResources = append(contract.RestResources, resource)
+// 	for _, flatResource := range flatContract.Resources {
+// 		resource := NewResource(flatResource)
+// 		contract.Resources = append(contract.Resources, resource)
 
-			flatSchema := flatContract.Schemas[flatResource.SchemaName]
+// 		flatSchema := flatContract.Schemas[flatResource.SchemaName]
 
-			schema := NewSchema(resource.UniqueHash, flatSchema)
-			contract.Schemas[resource.UniqueHash] = schema
-		}
-	}
+// 		schema := NewSchema(resource.UniqueHash, flatSchema)
+// 		contract.Schemas[resource.UniqueHash] = schema
+// 	}
 
-	return contract
-}
+// 	return contract
+// }

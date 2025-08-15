@@ -11,7 +11,7 @@
           }
         },
         "post": {
-          "requestBody": "CreateProduct",
+          "request": "CreateProduct",
           "responses": {
             "201": "Product",
             "400": "BadRequest"
@@ -26,7 +26,7 @@
           }
         },
         "put": {
-          "requestBody": "UpdateProduct",
+          "request": "UpdateProduct",
           "responses": {
             "200": "Product",
             "400": "BadRequest",
@@ -41,7 +41,7 @@
       "rest": {
         "/payments": {
           "post": {
-            "requestBody": "CreatePayment",
+            "request": "CreatePayment",
             "responses": {
               "201": "Payment",
               "400": "BadRequest"

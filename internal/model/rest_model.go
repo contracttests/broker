@@ -1,123 +1,167 @@
 package model
 
+import (
+	"strings"
+)
+
 type RestResource struct {
-	UniqueHash   string `json:"uniqueHash,omitzero"`
-	ProviderHash string `json:"providerHash,omitzero"`
-	ConsumerName string `json:"consumerName,omitzero"`
-	ProviderName string `json:"providerName,omitzero"`
-	Endpoint     string `json:"endpoint,omitzero"`
-	Method       string `json:"method,omitzero"`
-	StatusCode   string `json:"statusCode,omitzero"`
-	Direction    string `json:"direction,omitzero"`
-	Type         string `json:"type,omitzero"`
+	Endpoint   string `json:"endpoint,omitzero"`
+	Method     string `json:"method,omitzero"`
+	StatusCode string `json:"statusCode,omitzero"`
 }
 
-func (rr *RestResource) IsZero() bool {
-	return rr.UniqueHash == "" &&
-		rr.ProviderHash == "" &&
+type Resource struct {
+	Uuid         string       `json:"uuid,omitzero"`
+	ProviderUuid string       `json:"providerUuid,omitzero"`
+	ConsumerName string       `json:"consumerUuid,omitzero"`
+	ProviderName string       `json:"providerName,omitzero"`
+	SchemaUuid   string       `json:"schemaUuid,omitzero"`
+	Direction    string       `json:"direction,omitzero"`
+	Type         string       `json:"type,omitzero"`
+	RestResource RestResource `json:"restResource,omitzero"`
+}
+
+func (rr *Resource) IsZero() bool {
+	return rr.Uuid == "" &&
+		rr.ProviderUuid == "" &&
 		rr.ConsumerName == "" &&
 		rr.ProviderName == "" &&
-		rr.Endpoint == "" &&
-		rr.Method == "" &&
-		rr.StatusCode == "" &&
 		rr.Direction == "" &&
 		rr.Type == ""
 }
 
-func (rr *RestResource) IsProvider() bool {
+func (rr *Resource) IsProvider() bool {
 	return rr.Type == "provider"
 }
 
-func (rr *RestResource) IsConsumer() bool {
+func (rr *Resource) IsConsumer() bool {
 	return rr.Type == "consumer"
 }
 
-func (rr *RestResource) IsRequestBody() bool {
-	return rr.Direction == "requestBody"
+func (rr *Resource) IsRequestBody() bool {
+	return rr.Direction == "request"
 }
 
-func (rr *RestResource) IsResponse() bool {
-	return rr.Direction == "response"
+func NewResource(fullPath string, schemaUuid string) Resource {
+	parts := strings.Split(fullPath, ";")
+
+	if strings.Contains(fullPath, "consumes") {
+		if strings.Contains(fullPath, "request") {
+			consumerName, providerName, endpoint, method := parts[0], parts[2], parts[4], parts[5]
+
+			return NewConsumerRestRequestBody(schemaUuid, consumerName, providerName, endpoint, method)
+		}
+
+		consumerName, providerName, endpoint, method, statusCode := parts[0], parts[2], parts[4], parts[5], parts[7]
+
+		return NewConsumerRestResponse(schemaUuid, consumerName, providerName, endpoint, method, statusCode)
+	}
+
+	if strings.Contains(fullPath, "request") {
+		providerName, endpoint, method := parts[0], parts[3], parts[4]
+
+		return NewProviderRestRequestBody(schemaUuid, providerName, endpoint, method)
+	}
+
+	providerName, endpoint, method, statusCode := parts[0], parts[3], parts[4], parts[6]
+
+	return NewProviderRestResponse(schemaUuid, providerName, endpoint, method, statusCode)
 }
 
 func NewConsumerRestRequestBody(
+	schemaUuid string,
 	consumerName string,
 	providerName string,
 	endpoint string,
 	method string,
-) RestResource {
-	uniqueHash := HashFromStrings(consumerName, "consumes", providerName, endpoint, method, "requestBody")
-	providerHash := HashFromStrings(providerName, "provides", endpoint, method, "requestBody")
+) Resource {
+	uuid := UuidFromStrings(consumerName, "consumes", providerName, endpoint, method, "request")
+	providerUuid := UuidFromStrings(providerName, "provides", endpoint, method, "request")
 
-	return RestResource{
-		UniqueHash:   uniqueHash,
-		ProviderHash: providerHash,
+	return Resource{
+		Uuid:         uuid,
+		SchemaUuid:   schemaUuid,
+		ProviderUuid: providerUuid,
 		ConsumerName: consumerName,
 		ProviderName: providerName,
-		Endpoint:     endpoint,
-		Method:       method,
-		Direction:    "requestBody",
-		Type:         "consumer",
+		RestResource: RestResource{
+			Endpoint: endpoint,
+			Method:   method,
+		},
+		Direction: "request",
+		Type:      "consumer",
 	}
 }
 
 func NewConsumerRestResponse(
+	schemaUuid string,
 	consumerName string,
 	providerName string,
 	endpoint string,
 	method string,
 	statusCode string,
-) RestResource {
-	uniqueHash := HashFromStrings(consumerName, "consumes", providerName, endpoint, method, statusCode, "response")
-	providerHash := HashFromStrings(providerName, "provides", endpoint, method, statusCode, "response")
+) Resource {
+	uuid := UuidFromStrings(consumerName, "consumes", providerName, endpoint, method, statusCode, "response")
+	providerUuid := UuidFromStrings(providerName, "provides", endpoint, method, statusCode, "response")
 
-	return RestResource{
-		UniqueHash:   uniqueHash,
-		ProviderHash: providerHash,
+	return Resource{
+		Uuid:         uuid,
+		ProviderUuid: providerUuid,
+		SchemaUuid:   schemaUuid,
 		ConsumerName: consumerName,
 		ProviderName: providerName,
-		Endpoint:     endpoint,
-		Method:       method,
-		StatusCode:   statusCode,
-		Direction:    "response",
-		Type:         "consumer",
+		RestResource: RestResource{
+			Endpoint:   endpoint,
+			Method:     method,
+			StatusCode: statusCode,
+		},
+		Direction: "response",
+		Type:      "consumer",
 	}
 }
 
 func NewProviderRestRequestBody(
+	schemaUuid string,
 	providerName string,
 	endpoint string,
 	method string,
-) RestResource {
-	uniqueHash := HashFromStrings(providerName, "provides", endpoint, method, "requestBody")
+) Resource {
+	uuid := UuidFromStrings(providerName, "provides", endpoint, method, "request")
 
-	return RestResource{
-		UniqueHash:   uniqueHash,
-		ProviderHash: uniqueHash,
+	return Resource{
+		Uuid:         uuid,
+		SchemaUuid:   schemaUuid,
+		ProviderUuid: uuid,
 		ProviderName: providerName,
-		Endpoint:     endpoint,
-		Method:       method,
-		Direction:    "requestBody",
-		Type:         "provider",
+		RestResource: RestResource{
+			Endpoint: endpoint,
+			Method:   method,
+		},
+		Direction: "request",
+		Type:      "provider",
 	}
 }
 
 func NewProviderRestResponse(
+	schemaUuid string,
 	providerName string,
 	endpoint string,
 	method string,
 	statusCode string,
-) RestResource {
-	uniqueHash := HashFromStrings(providerName, "provides", endpoint, method, statusCode, "response")
+) Resource {
+	uuid := UuidFromStrings(providerName, "provides", endpoint, method, statusCode, "response")
 
-	return RestResource{
-		UniqueHash:   uniqueHash,
-		ProviderHash: uniqueHash,
+	return Resource{
+		Uuid:         uuid,
+		ProviderUuid: uuid,
+		SchemaUuid:   schemaUuid,
 		ProviderName: providerName,
-		Endpoint:     endpoint,
-		Method:       method,
-		StatusCode:   statusCode,
-		Direction:    "response",
-		Type:         "provider",
+		RestResource: RestResource{
+			Endpoint:   endpoint,
+			Method:     method,
+			StatusCode: statusCode,
+		},
+		Direction: "response",
+		Type:      "provider",
 	}
 }
