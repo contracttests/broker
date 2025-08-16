@@ -10,43 +10,37 @@ import (
 func ValidateContract(contract model.Contract) bool {
 	hasError := false
 
-	for _, restResource := range contract.Resources {
-		if restResource.IsConsumer() {
-			providerResource := repository.GetResource(restResource.ProviderUuid)
+	for _, resource := range contract.Resources {
+		if resource.IsConsumer() {
+			providerResource := repository.GetResource(resource.ProviderUuid)
 			if providerResource.IsZero() {
 				fmt.Println("Provider rest resource not found")
 			}
 
-			leftSchema := contract.Schemas[restResource.SchemaUuid]
-			rightSchema := repository.GetSchema(providerResource.SchemaUuid)
-
-			diff := SchemaDiff(leftSchema, rightSchema)
+			diff := SchemaDiff(resource.Schema, providerResource.Schema)
 
 			if !diff.HasProperty() {
 				continue
 			}
 
-			PrintInvalidConsumerResource(restResource, providerResource, diff)
+			PrintInvalidConsumerResource(resource, providerResource, diff)
 			hasError = true
 		}
 
-		if restResource.IsProvider() {
-			consumerResources := repository.GetConsumerResources(restResource.ProviderUuid)
+		if resource.IsProvider() {
+			consumerResources := repository.GetConsumerResources(resource.ProviderUuid)
 			if len(consumerResources) == 0 {
 				continue
 			}
 
 			for _, consumerRestResource := range consumerResources {
-				leftSchema := repository.GetSchema(consumerRestResource.SchemaUuid)
-				rightSchema := contract.Schemas[restResource.SchemaUuid]
-
-				diff := SchemaDiff(leftSchema, rightSchema)
+				diff := SchemaDiff(consumerRestResource.Schema, resource.Schema)
 
 				if !diff.HasProperty() {
 					continue
 				}
 
-				PrintInvalidProviderResource(restResource, consumerRestResource, diff)
+				PrintInvalidProviderResource(resource, consumerRestResource, diff)
 				hasError = true
 			}
 		}

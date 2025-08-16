@@ -58,11 +58,8 @@ func (f *PropertyPath) String() string {
 
 func (c *Contract) ToContractModel() model.Contract {
 	resources := c.buildResources([]model.Resource{}, ResourcePath(""), *c)
-	schemas := Schemas(*c)
-
 	return model.Contract{
 		Resources: resources,
-		Schemas:   schemas,
 	}
 }
 
@@ -96,7 +93,19 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case Message:
 		for messageName, schemaName := range unknown {
 			newResourcePath := resourcePath.Append("message", messageName)
-			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(schemaName)))
+			hash := model.UuidFromStrings(schemaName)
+			schema := buildSchema(
+				0,
+				schemaName,
+				c.Schemas,
+				model.Schema{
+					Hash:       hash,
+					Properties: make(map[string]model.Property),
+				},
+				PropertyPath("root"),
+				c.Schemas[schemaName],
+			)
+			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
 		}
 
 		return resources
@@ -133,7 +142,21 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case PostMethod:
 		if unknown.HasRequestBody() {
 			newResourcePath := resourcePath.Append("post", "request")
-			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(unknown.RequestBody)))
+			hash := model.UuidFromStrings(unknown.RequestBody)
+
+			schema := buildSchema(
+				0,
+				unknown.RequestBody,
+				c.Schemas,
+				model.Schema{
+					Hash:       hash,
+					Properties: make(map[string]model.Property),
+				},
+				PropertyPath("root"),
+				c.Schemas[unknown.RequestBody],
+			)
+
+			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
 		}
 
 		newResourcePath := resourcePath.Append("post", "responses")
@@ -144,7 +167,21 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case PutMethod:
 		if unknown.HasRequestBody() {
 			newResourcePath := resourcePath.Append("put", "request")
-			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(unknown.RequestBody)))
+			hash := model.UuidFromStrings(unknown.RequestBody)
+
+			schema := buildSchema(
+				0,
+				unknown.RequestBody,
+				c.Schemas,
+				model.Schema{
+					Hash:       hash,
+					Properties: make(map[string]model.Property),
+				},
+				PropertyPath("root"),
+				c.Schemas[unknown.RequestBody],
+			)
+
+			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
 		}
 
 		newResourcePath := resourcePath.Append("put", "responses")
@@ -161,7 +198,20 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case Responses:
 		for statusCode, schemaName := range unknown {
 			newResourcePath := resourcePath.Append(strconv.Itoa(statusCode))
-			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(schemaName)))
+			hash := model.UuidFromStrings(schemaName)
+			schema := buildSchema(
+				0,
+				schemaName,
+				c.Schemas,
+				model.Schema{
+					Hash:       hash,
+					Properties: make(map[string]model.Property),
+				},
+				PropertyPath("root"),
+				c.Schemas[schemaName],
+			)
+
+			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
 		}
 
 		return resources
@@ -170,7 +220,7 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	return resources
 }
 
-func Schemas(contractDsl Contract) map[string]model.Schema {
+func (c *Contract) SchemasResolver(contractDsl Contract) map[string]model.Schema {
 	schemas := make(map[string]model.Schema)
 
 	for schemaName, schema := range contractDsl.Schemas {

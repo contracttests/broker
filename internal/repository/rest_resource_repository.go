@@ -5,17 +5,21 @@ import "github.com/contracttests/broker/internal/model"
 var restResourcesMap = make(map[string]model.Resource)
 var consumerRestResouce = make(map[string][]model.Resource)
 
-func SaveRestResource(resource model.Resource) {
-	restResourcesMap[resource.Uuid] = resource
+func SaveResource(resource model.Resource) {
+	if resource.ConsumerUuid == "" {
+		restResourcesMap[resource.ProviderUuid] = resource
+	} else {
+		restResourcesMap[resource.ConsumerUuid] = resource
+	}
 
 	if resource.IsConsumer() {
 		consumerRestResouce[resource.ProviderUuid] = append(consumerRestResouce[resource.ProviderUuid], resource)
 	}
 }
 
-func GetResource(hash string) model.Resource {
+func GetResource(uuid string) model.Resource {
 	var restResource model.Resource
-	if restResource, ok := restResourcesMap[hash]; ok {
+	if restResource, ok := restResourcesMap[uuid]; ok {
 		return restResource
 	}
 

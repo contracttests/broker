@@ -11,19 +11,31 @@ type RestResource struct {
 }
 
 type Resource struct {
-	Uuid         string       `json:"uuid,omitzero"`
-	ProviderUuid string       `json:"providerUuid,omitzero"`
-	ConsumerName string       `json:"consumerUuid,omitzero"`
-	ProviderName string       `json:"providerName,omitzero"`
-	SchemaUuid   string       `json:"schemaUuid,omitzero"`
-	Schema       Schema       `json:"schema,omitzero"`
-	Direction    string       `json:"direction,omitzero"`
-	Type         string       `json:"type,omitzero"`
-	RestResource RestResource `json:"restResource,omitzero"`
+	ConsumerUuid string           `json:"consumerUuid,omitzero"`
+	ProviderUuid string           `json:"providerUuid,omitzero"`
+	ConsumerName string           `json:"consumerName,omitzero"`
+	ProviderName string           `json:"providerName,omitzero"`
+	Consumer     ConsumerResource `json:"consumer,omitzero"`
+	Provider     ProviderResource `json:"provider,omitzero"`
+	Schema       Schema           `json:"schema,omitzero"`
+	Direction    string           `json:"direction,omitzero"`
+	Type         string           `json:"type,omitzero"`
+	RestResource RestResource     `json:"restResource,omitzero"`
+}
+
+type ConsumerResource struct {
+	Uuid         string `json:"uuid,omitzero"`
+	Name         string `json:"name,omitzero"`
+	ProviderUuid string `json:"providerUuid,omitzero"`
+}
+
+type ProviderResource struct {
+	Uuid string `json:"uuid,omitzero"`
+	Name string `json:"name,omitzero"`
 }
 
 func (rr *Resource) IsZero() bool {
-	return rr.Uuid == "" &&
+	return rr.ConsumerUuid == "" &&
 		rr.ProviderUuid == "" &&
 		rr.ConsumerName == "" &&
 		rr.ProviderName == "" &&
@@ -43,48 +55,55 @@ func (rr *Resource) IsRequestBody() bool {
 	return rr.Direction == "request"
 }
 
-func NewResource(fullPath string, schemaUuid string) Resource {
+func NewResource(fullPath string, schema Schema) Resource {
 	parts := strings.Split(fullPath, ";")
 
 	if strings.Contains(fullPath, "consumes") {
 		if strings.Contains(fullPath, "request") {
 			consumerName, providerName, endpoint, method := parts[0], parts[2], parts[4], parts[5]
 
-			return NewConsumerRestRequestBody(schemaUuid, consumerName, providerName, endpoint, method)
+			return NewConsumerRestRequestBody(consumerName, providerName, endpoint, method, schema)
 		}
 
 		consumerName, providerName, endpoint, method, statusCode := parts[0], parts[2], parts[4], parts[5], parts[7]
 
-		return NewConsumerRestResponse(schemaUuid, consumerName, providerName, endpoint, method, statusCode)
+		return NewConsumerRestResponse(consumerName, providerName, endpoint, method, statusCode, schema)
 	}
 
 	if strings.Contains(fullPath, "request") {
 		providerName, endpoint, method := parts[0], parts[3], parts[4]
 
-		return NewProviderRestRequestBody(schemaUuid, providerName, endpoint, method)
+		return NewProviderRestRequestBody(providerName, endpoint, method, schema)
 	}
 
 	providerName, endpoint, method, statusCode := parts[0], parts[3], parts[4], parts[6]
 
-	return NewProviderRestResponse(schemaUuid, providerName, endpoint, method, statusCode)
+	return NewProviderRestResponse(providerName, endpoint, method, statusCode, schema)
 }
 
 func NewConsumerRestRequestBody(
-	schemaUuid string,
 	consumerName string,
 	providerName string,
 	endpoint string,
 	method string,
+	schema Schema,
 ) Resource {
 	uuid := UuidFromStrings(consumerName, "consumes", providerName, endpoint, method, "request")
 	providerUuid := UuidFromStrings(providerName, "provides", endpoint, method, "request")
 
-	return Resource{
+	consumer := ConsumerResource{
 		Uuid:         uuid,
-		SchemaUuid:   schemaUuid,
+		Name:         consumerName,
+		ProviderUuid: providerUuid,
+	}
+
+	return Resource{
+		ConsumerUuid: uuid,
 		ProviderUuid: providerUuid,
 		ConsumerName: consumerName,
 		ProviderName: providerName,
+		Consumer:     consumer,
+		Schema:       schema,
 		RestResource: RestResource{
 			Endpoint: endpoint,
 			Method:   method,
@@ -95,22 +114,29 @@ func NewConsumerRestRequestBody(
 }
 
 func NewConsumerRestResponse(
-	schemaUuid string,
 	consumerName string,
 	providerName string,
 	endpoint string,
 	method string,
 	statusCode string,
+	schema Schema,
 ) Resource {
 	uuid := UuidFromStrings(consumerName, "consumes", providerName, endpoint, method, statusCode, "response")
 	providerUuid := UuidFromStrings(providerName, "provides", endpoint, method, statusCode, "response")
 
-	return Resource{
+	consumer := ConsumerResource{
 		Uuid:         uuid,
+		Name:         consumerName,
 		ProviderUuid: providerUuid,
-		SchemaUuid:   schemaUuid,
+	}
+
+	return Resource{
+		ConsumerUuid: uuid,
+		ProviderUuid: providerUuid,
 		ConsumerName: consumerName,
 		ProviderName: providerName,
+		Consumer:     consumer,
+		Schema:       schema,
 		RestResource: RestResource{
 			Endpoint:   endpoint,
 			Method:     method,
@@ -122,18 +148,23 @@ func NewConsumerRestResponse(
 }
 
 func NewProviderRestRequestBody(
-	schemaUuid string,
 	providerName string,
 	endpoint string,
 	method string,
+	schema Schema,
 ) Resource {
 	uuid := UuidFromStrings(providerName, "provides", endpoint, method, "request")
 
+	provider := ProviderResource{
+		Uuid: uuid,
+		Name: providerName,
+	}
+
 	return Resource{
-		Uuid:         uuid,
-		SchemaUuid:   schemaUuid,
 		ProviderUuid: uuid,
 		ProviderName: providerName,
+		Provider:     provider,
+		Schema:       schema,
 		RestResource: RestResource{
 			Endpoint: endpoint,
 			Method:   method,
@@ -144,19 +175,24 @@ func NewProviderRestRequestBody(
 }
 
 func NewProviderRestResponse(
-	schemaUuid string,
 	providerName string,
 	endpoint string,
 	method string,
 	statusCode string,
+	schema Schema,
 ) Resource {
 	uuid := UuidFromStrings(providerName, "provides", endpoint, method, statusCode, "response")
 
+	provider := ProviderResource{
+		Uuid: uuid,
+		Name: providerName,
+	}
+
 	return Resource{
-		Uuid:         uuid,
 		ProviderUuid: uuid,
-		SchemaUuid:   schemaUuid,
 		ProviderName: providerName,
+		Provider:     provider,
+		Schema:       schema,
 		RestResource: RestResource{
 			Endpoint:   endpoint,
 			Method:     method,

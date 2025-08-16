@@ -7,10 +7,6 @@ import (
 
 func SaveContract(contract model.Contract) {
 	for _, resource := range contract.Resources {
-		repository.SaveRestResource(resource)
-	}
-
-	for _, schema := range contract.Schemas {
-		repository.SaveSchema(schema)
+		repository.SaveResource(resource)
 	}
 }
