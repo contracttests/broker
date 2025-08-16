@@ -16,6 +16,7 @@ type Resource struct {
 	ConsumerName string       `json:"consumerUuid,omitzero"`
 	ProviderName string       `json:"providerName,omitzero"`
 	SchemaUuid   string       `json:"schemaUuid,omitzero"`
+	Schema       Schema       `json:"schema,omitzero"`
 	Direction    string       `json:"direction,omitzero"`
 	Type         string       `json:"type,omitzero"`
 	RestResource RestResource `json:"restResource,omitzero"`

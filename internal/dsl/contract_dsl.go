@@ -57,7 +57,7 @@ func (f *PropertyPath) String() string {
 }
 
 func (c *Contract) ToContractModel() model.Contract {
-	resources := Resources(*c)
+	resources := c.buildResources([]model.Resource{}, ResourcePath(""), *c)
 	schemas := Schemas(*c)
 
 	return model.Contract{
@@ -66,112 +66,108 @@ func (c *Contract) ToContractModel() model.Contract {
 	}
 }
 
-func Resources(contractDsl Contract) []model.Resource {
-	return buildResources([]model.Resource{}, ResourcePath(""), contractDsl)
-}
-
-func buildResources(flatResources []model.Resource, resourcePath ResourcePath, unknown any) []model.Resource {
+func (c *Contract) buildResources(resources []model.Resource, resourcePath ResourcePath, unknown any) []model.Resource {
 	switch unknown := unknown.(type) {
 	case Contract:
 		resourcePath = resourcePath.Append(unknown.Api.Name)
 
 		for serviceName, consumes := range unknown.ConsumesServices {
-			newFullPath := resourcePath.Append("consumes", serviceName)
-			flatResources = buildResources(flatResources, newFullPath, consumes)
+			newResourcePath := resourcePath.Append("consumes", serviceName)
+			resources = c.buildResources(resources, newResourcePath, consumes)
 		}
 
-		newFullPath := resourcePath.Append("provides")
-		flatResources = buildResources(flatResources, newFullPath, unknown.Provides)
+		newResourcePath := resourcePath.Append("provides")
+		resources = c.buildResources(resources, newResourcePath, unknown.Provides)
 
-		return flatResources
+		return resources
 
 	case Consumes:
-		flatResources = buildResources(flatResources, resourcePath, unknown.Rest)
-		flatResources = buildResources(flatResources, resourcePath, unknown.Message)
+		resources = c.buildResources(resources, resourcePath, unknown.Rest)
+		resources = c.buildResources(resources, resourcePath, unknown.Message)
 
-		return flatResources
+		return resources
 
 	case Provides:
-		flatResources = buildResources(flatResources, resourcePath, unknown.Rest)
-		flatResources = buildResources(flatResources, resourcePath, unknown.Message)
+		resources = c.buildResources(resources, resourcePath, unknown.Rest)
+		resources = c.buildResources(resources, resourcePath, unknown.Message)
 
-		return flatResources
+		return resources
 
 	case Message:
 		for messageName, schemaName := range unknown {
-			newFullPath := resourcePath.Append("message", messageName)
-			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(schemaName)))
+			newResourcePath := resourcePath.Append("message", messageName)
+			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(schemaName)))
 		}
 
-		return flatResources
+		return resources
 
 	case Rest:
 		for endpoint, methods := range unknown {
 			if methods.Get.IsNonZero() {
-				newFullPath := resourcePath.Append("rest", endpoint)
-				flatResources = buildResources(flatResources, newFullPath, methods.Get)
+				newResourcePath := resourcePath.Append("rest", endpoint)
+				resources = c.buildResources(resources, newResourcePath, methods.Get)
 			}
 
 			if methods.Post.IsNonZero() {
-				newFullPath := resourcePath.Append("rest", endpoint)
-				flatResources = buildResources(flatResources, newFullPath, methods.Post)
+				newResourcePath := resourcePath.Append("rest", endpoint)
+				resources = c.buildResources(resources, newResourcePath, methods.Post)
 			}
 
 			if methods.Put.IsNonZero() {
-				newFullPath := resourcePath.Append("rest", endpoint)
-				flatResources = buildResources(flatResources, newFullPath, methods.Put)
+				newResourcePath := resourcePath.Append("rest", endpoint)
+				resources = c.buildResources(resources, newResourcePath, methods.Put)
 			}
 
 			if methods.Delete.IsNonZero() {
-				newFullPath := resourcePath.Append("rest", endpoint)
-				flatResources = buildResources(flatResources, newFullPath, methods.Delete)
+				newResourcePath := resourcePath.Append("rest", endpoint)
+				resources = c.buildResources(resources, newResourcePath, methods.Delete)
 			}
 		}
 
 	case GetMethod:
-		newFullPath := resourcePath.Append("get", "responses")
-		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
+		newResourcePath := resourcePath.Append("get", "responses")
+		resources = c.buildResources(resources, newResourcePath, unknown.Responses)
 
-		return flatResources
+		return resources
 
 	case PostMethod:
 		if unknown.HasRequestBody() {
-			newFullPath := resourcePath.Append("post", "request")
-			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(unknown.RequestBody)))
+			newResourcePath := resourcePath.Append("post", "request")
+			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(unknown.RequestBody)))
 		}
 
-		newFullPath := resourcePath.Append("post", "responses")
-		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
+		newResourcePath := resourcePath.Append("post", "responses")
+		resources = c.buildResources(resources, newResourcePath, unknown.Responses)
 
-		return flatResources
+		return resources
 
 	case PutMethod:
 		if unknown.HasRequestBody() {
-			newFullPath := resourcePath.Append("put", "request")
-			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(unknown.RequestBody)))
+			newResourcePath := resourcePath.Append("put", "request")
+			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(unknown.RequestBody)))
 		}
 
-		newFullPath := resourcePath.Append("put", "responses")
-		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
+		newResourcePath := resourcePath.Append("put", "responses")
+		resources = c.buildResources(resources, newResourcePath, unknown.Responses)
 
-		return flatResources
+		return resources
 
 	case DeleteMethod:
-		newFullPath := resourcePath.Append("delete", "responses")
-		flatResources = buildResources(flatResources, newFullPath, unknown.Responses)
+		newResourcePath := resourcePath.Append("delete", "responses")
+		resources = c.buildResources(resources, newResourcePath, unknown.Responses)
 
-		return flatResources
+		return resources
 
 	case Responses:
 		for statusCode, schemaName := range unknown {
-			newFullPath := resourcePath.Append(strconv.Itoa(statusCode))
-			flatResources = append(flatResources, model.NewResource(newFullPath.String(), model.UuidFromStrings(schemaName)))
+			newResourcePath := resourcePath.Append(strconv.Itoa(statusCode))
+			resources = append(resources, model.NewResource(newResourcePath.String(), model.UuidFromStrings(schemaName)))
 		}
 
-		return flatResources
+		return resources
 	}
 
-	return flatResources
+	return resources
 }
 
 func Schemas(contractDsl Contract) map[string]model.Schema {
