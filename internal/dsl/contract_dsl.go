@@ -93,13 +93,11 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case Message:
 		for messageName, schemaName := range unknown {
 			newResourcePath := resourcePath.Append("message", messageName)
-			hash := model.UuidFromStrings(schemaName)
 			schema := buildSchema(
 				0,
 				schemaName,
 				c.Schemas,
 				model.Schema{
-					Hash:       hash,
 					Properties: make(map[string]model.Property),
 				},
 				PropertyPath("root"),
@@ -142,14 +140,12 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case PostMethod:
 		if unknown.HasRequestBody() {
 			newResourcePath := resourcePath.Append("post", "request")
-			hash := model.UuidFromStrings(unknown.RequestBody)
 
 			schema := buildSchema(
 				0,
 				unknown.RequestBody,
 				c.Schemas,
 				model.Schema{
-					Hash:       hash,
 					Properties: make(map[string]model.Property),
 				},
 				PropertyPath("root"),
@@ -167,14 +163,12 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case PutMethod:
 		if unknown.HasRequestBody() {
 			newResourcePath := resourcePath.Append("put", "request")
-			hash := model.UuidFromStrings(unknown.RequestBody)
 
 			schema := buildSchema(
 				0,
 				unknown.RequestBody,
 				c.Schemas,
 				model.Schema{
-					Hash:       hash,
 					Properties: make(map[string]model.Property),
 				},
 				PropertyPath("root"),
@@ -198,13 +192,11 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 	case Responses:
 		for statusCode, schemaName := range unknown {
 			newResourcePath := resourcePath.Append(strconv.Itoa(statusCode))
-			hash := model.UuidFromStrings(schemaName)
 			schema := buildSchema(
 				0,
 				schemaName,
 				c.Schemas,
 				model.Schema{
-					Hash:       hash,
 					Properties: make(map[string]model.Property),
 				},
 				PropertyPath("root"),
@@ -231,7 +223,6 @@ func (c *Contract) SchemasResolver(contractDsl Contract) map[string]model.Schema
 			schemaName,
 			contractDsl.Schemas,
 			model.Schema{
-				Hash:       hash,
 				Properties: make(map[string]model.Property),
 			},
 			PropertyPath("root"),

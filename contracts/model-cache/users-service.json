@@ -1,0 +1,274 @@
+{
+    "resources": [
+        {
+            "provider": {
+                "uuid": "ed355453-d1e3-544b-ba00-26a1507a1fd6",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "array"
+                    },
+                    "root[]": {
+                        "path": "root[]",
+                        "type": "object"
+                    },
+                    "root[].email": {
+                        "path": "root[].email",
+                        "type": "string"
+                    },
+                    "root[].uuid": {
+                        "path": "root[].uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users",
+                "method": "get",
+                "statusCode": "200"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "6391f6e0-20c4-56f5-8989-c6574d0cf7a1",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.email": {
+                        "path": "root.email",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "request",
+            "restResource": {
+                "endpoint": "/users",
+                "method": "post"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "0e13d01e-c26a-5fb2-9f75-c0b0daa95e5b",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.email": {
+                        "path": "root.email",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users",
+                "method": "post",
+                "statusCode": "201"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "3c338b47-69c0-5f79-9008-9eb66e0e6b79",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users",
+                "method": "post",
+                "statusCode": "400"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "67002cff-0503-5fa9-afbb-482961ce5569",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.email": {
+                        "path": "root.email",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "get",
+                "statusCode": "200"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "f42d1d68-b53a-5c2a-abc6-83d38b5f8b92",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "get",
+                "statusCode": "404"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "3602f865-1426-51b7-b2f5-05a0499a4909",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.email": {
+                        "path": "root.email",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "request",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "put"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "c4ce491f-81b4-5521-9ba2-4b6554ed8afa",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "put",
+                "statusCode": "400"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "e36a52fd-d444-5007-8e30-4cb35ca963c1",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "put",
+                "statusCode": "404"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "c32dae3f-1cb3-5f66-af40-19d096fad2a7",
+                "name": "users-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.email": {
+                        "path": "root.email",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "put",
+                "statusCode": "200"
+            }
+        }
+    ]
+}

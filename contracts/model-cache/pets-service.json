@@ -1,0 +1,388 @@
+{
+    "resources": [
+        {
+            "consumer": {
+                "uuid": "b0dd0062-5fee-57b8-bf2a-8c0da13c39aa",
+                "name": "pets-service",
+                "providerUuid": "67002cff-0503-5fa9-afbb-482961ce5569"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "get",
+                "statusCode": "200"
+            }
+        },
+        {
+            "consumer": {
+                "uuid": "ea65a2ab-e3e5-5b1f-adc1-2b4edc257263",
+                "name": "pets-service",
+                "providerUuid": "f42d1d68-b53a-5c2a-abc6-83d38b5f8b92"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/users/{uuid}",
+                "method": "get",
+                "statusCode": "404"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "be7dd4b3-21e1-5af4-90c7-9582e1dabc5f",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "array"
+                    },
+                    "root[]": {
+                        "path": "root[]",
+                        "type": "object"
+                    },
+                    "root[].age": {
+                        "path": "root[].age",
+                        "type": "integer"
+                    },
+                    "root[].breed": {
+                        "path": "root[].breed",
+                        "type": "string"
+                    },
+                    "root[].name": {
+                        "path": "root[].name",
+                        "type": "string"
+                    },
+                    "root[].ownerUuid": {
+                        "path": "root[].ownerUuid",
+                        "type": "string"
+                    },
+                    "root[].uuid": {
+                        "path": "root[].uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets",
+                "method": "get",
+                "statusCode": "200"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "40d5baad-b211-54ae-b740-b45eb9377e46",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.age": {
+                        "path": "root.age",
+                        "type": "integer"
+                    },
+                    "root.breed": {
+                        "path": "root.breed",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    },
+                    "root.ownerUuid": {
+                        "path": "root.ownerUuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "request",
+            "restResource": {
+                "endpoint": "/pets",
+                "method": "post"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "aadcf11b-6b53-5469-818b-421667bd007f",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.age": {
+                        "path": "root.age",
+                        "type": "integer"
+                    },
+                    "root.breed": {
+                        "path": "root.breed",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    },
+                    "root.ownerUuid": {
+                        "path": "root.ownerUuid",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets",
+                "method": "post",
+                "statusCode": "201"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "5c1eb8ba-eb62-59c3-ae22-ce75a1733c25",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets",
+                "method": "post",
+                "statusCode": "400"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "a03fd4c1-5144-528c-9502-a55e70cb2ef8",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.age": {
+                        "path": "root.age",
+                        "type": "integer"
+                    },
+                    "root.breed": {
+                        "path": "root.breed",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    },
+                    "root.ownerUuid": {
+                        "path": "root.ownerUuid",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets/{uuid}",
+                "method": "get",
+                "statusCode": "200"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "f2fa450c-f240-5942-82ea-d98bfe526a17",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets/{uuid}",
+                "method": "get",
+                "statusCode": "404"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "500a70f5-7677-5565-ab8f-f1e8ca3b8a86",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.age": {
+                        "path": "root.age",
+                        "type": "integer"
+                    },
+                    "root.breed": {
+                        "path": "root.breed",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    },
+                    "root.ownerUuid": {
+                        "path": "root.ownerUuid",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "request",
+            "restResource": {
+                "endpoint": "/pets/{uuid}",
+                "method": "put"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "36dea632-9568-5903-acf2-a6321478263a",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.age": {
+                        "path": "root.age",
+                        "type": "integer"
+                    },
+                    "root.breed": {
+                        "path": "root.breed",
+                        "type": "string"
+                    },
+                    "root.name": {
+                        "path": "root.name",
+                        "type": "string"
+                    },
+                    "root.ownerUuid": {
+                        "path": "root.ownerUuid",
+                        "type": "string"
+                    },
+                    "root.uuid": {
+                        "path": "root.uuid",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets/{uuid}",
+                "method": "put",
+                "statusCode": "200"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "24483d89-5994-5c4a-8665-f5845a5fedf4",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets/{uuid}",
+                "method": "put",
+                "statusCode": "400"
+            }
+        },
+        {
+            "provider": {
+                "uuid": "24c85c8a-de5d-5023-976b-0bbf358aabd5",
+                "name": "pets-service"
+            },
+            "schema": {
+                "properties": {
+                    "root": {
+                        "path": "root",
+                        "type": "object"
+                    },
+                    "root.message": {
+                        "path": "root.message",
+                        "type": "string"
+                    }
+                }
+            },
+            "direction": "response",
+            "restResource": {
+                "endpoint": "/pets/{uuid}",
+                "method": "put",
+                "statusCode": "404"
+            }
+        }
+    ]
+}

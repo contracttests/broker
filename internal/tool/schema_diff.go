@@ -4,7 +4,6 @@ import "github.com/contracttests/broker/internal/model"
 
 func SchemaDiff(left model.Schema, right model.Schema) model.Schema {
 	diff := model.Schema{
-		Hash:       left.Hash,
 		Properties: make(map[string]model.Property),
 	}
 

@@ -28,9 +28,7 @@ schemas:
   User:
     type: object
     properties:
-      uuid:
-        type: string
-      email:
+      nuuid:
         type: string
 
   Users:

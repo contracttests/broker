@@ -13,12 +13,11 @@ func NewProperty(path string, propertyType string) Property {
 }
 
 type Schema struct {
-	Hash       string              `json:"hash,omitzero"`
 	Properties map[string]Property `json:"properties,omitzero"`
 }
 
 func (s *Schema) IsZero() bool {
-	return s.Hash == "" && len(s.Properties) == 0
+	return len(s.Properties) == 0
 }
 
 func (s *Schema) HasProperty() bool {

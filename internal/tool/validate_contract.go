@@ -12,7 +12,7 @@ func ValidateContract(contract model.Contract) bool {
 
 	for _, resource := range contract.Resources {
 		if resource.IsConsumer() {
-			providerResource := repository.GetResource(resource.ProviderUuid)
+			providerResource := repository.GetResource(resource.Consumer.ProviderUuid)
 			if providerResource.IsZero() {
 				fmt.Println("Provider rest resource not found")
 			}
@@ -28,19 +28,19 @@ func ValidateContract(contract model.Contract) bool {
 		}
 
 		if resource.IsProvider() {
-			consumerResources := repository.GetConsumerResources(resource.ProviderUuid)
+			consumerResources := repository.GetConsumerResources(resource.Provider.Uuid)
 			if len(consumerResources) == 0 {
 				continue
 			}
 
-			for _, consumerRestResource := range consumerResources {
-				diff := SchemaDiff(consumerRestResource.Schema, resource.Schema)
+			for _, consumerResource := range consumerResources {
+				diff := SchemaDiff(consumerResource.Schema, resource.Schema)
 
 				if !diff.HasProperty() {
 					continue
 				}
 
-				PrintInvalidProviderResource(resource, consumerRestResource, diff)
+				PrintInvalidProviderResource(resource, consumerResource, diff)
 				hasError = true
 			}
 		}
