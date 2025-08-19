@@ -28,7 +28,7 @@ schemas:
   User:
     type: object
     properties:
-      nuuid:
+      none:
         type: string
 
   Users:

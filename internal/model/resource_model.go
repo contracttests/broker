@@ -1,9 +1,5 @@
 package model
 
-import (
-	"strings"
-)
-
 type RestResource struct {
 	Endpoint   string `json:"endpoint,omitzero"`
 	Method     string `json:"method,omitzero"`
@@ -46,32 +42,6 @@ func (rr *Resource) IsZero() bool {
 
 func (rr *Resource) IsRequestBody() bool {
 	return rr.Direction == "request"
-}
-
-func NewResource(fullPath string, schema Schema) Resource {
-	parts := strings.Split(fullPath, ";")
-
-	if strings.Contains(fullPath, "consumes") {
-		if strings.Contains(fullPath, "request") {
-			consumerName, providerName, endpoint, method := parts[0], parts[2], parts[4], parts[5]
-
-			return NewConsumerRequestBody(consumerName, providerName, endpoint, method, schema)
-		}
-
-		consumerName, providerName, endpoint, method, statusCode := parts[0], parts[2], parts[4], parts[5], parts[7]
-
-		return NewConsumerResponse(consumerName, providerName, endpoint, method, statusCode, schema)
-	}
-
-	if strings.Contains(fullPath, "request") {
-		providerName, endpoint, method := parts[0], parts[3], parts[4]
-
-		return NewProviderRequestBody(providerName, endpoint, method, schema)
-	}
-
-	providerName, endpoint, method, statusCode := parts[0], parts[3], parts[4], parts[6]
-
-	return NewProviderResponse(providerName, endpoint, method, statusCode, schema)
 }
 
 func NewConsumerRequestBody(

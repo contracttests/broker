@@ -30,12 +30,14 @@ schemas:
     properties:
       uuid:
         type: string
-      email:
+      none:
         type: string
+
   Users:
     type: array
     items:
       "$ref": User
+
   CreateUser:
     type: object
     properties:
@@ -43,6 +45,7 @@ schemas:
         type: string
       email:
         type: string
+
   UpdateUser:
     type: object
     properties:

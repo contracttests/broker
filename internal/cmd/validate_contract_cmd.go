@@ -51,6 +51,8 @@ var ValidateContractCmd = &cobra.Command{
 		}
 
 		fmt.Println("Contract is valid")
+
+		tool.UploadContract(contractDslFilepath)
 	},
 }
 

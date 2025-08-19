@@ -3,7 +3,6 @@ package dsl
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/contracttests/broker/internal/model"
 )
@@ -19,45 +18,8 @@ type Contract struct {
 	Schemas          map[string]Schema   `json:"schemas,omitzero"`
 }
 
-type ResourcePath string
-
-func (f *ResourcePath) Append(parts ...string) ResourcePath {
-	separator := ";"
-
-	if string(*f) == "" {
-		return ResourcePath(strings.Join(parts, separator))
-	}
-
-	return ResourcePath(strings.Join([]string{string(*f), strings.Join(parts, separator)}, separator))
-}
-
-func (f *ResourcePath) String() string {
-	return string(*f)
-}
-
-type PropertyPath string
-
-func (f *PropertyPath) Append(parts ...string) PropertyPath {
-	separator := "."
-
-	if string(*f) == "" {
-		return PropertyPath(strings.Join(parts, separator))
-	}
-
-	return PropertyPath(strings.Join([]string{string(*f), strings.Join(parts, separator)}, separator))
-}
-
-func (f *PropertyPath) AppendArray() PropertyPath {
-	return PropertyPath(f.String() + "[]")
-}
-
-func (f *PropertyPath) String() string {
-
-	return string(*f)
-}
-
 func (c *Contract) ToContractModel() model.Contract {
-	resources := c.buildResources([]model.Resource{}, ResourcePath(""), *c)
+	resources := c.buildResources([]model.Resource{}, NewResourcePath(""), *c)
 	return model.Contract{
 		Resources: resources,
 	}
@@ -97,13 +59,11 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 				0,
 				schemaName,
 				c.Schemas,
-				model.Schema{
-					Properties: make(map[string]model.Property),
-				},
-				PropertyPath("root"),
+				model.NewSchema(),
+				NewPropertyPath("root"),
 				c.Schemas[schemaName],
 			)
-			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
+			resources = append(resources, NewResource(newResourcePath, schema))
 		}
 
 		return resources
@@ -145,14 +105,12 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 				0,
 				unknown.RequestBody,
 				c.Schemas,
-				model.Schema{
-					Properties: make(map[string]model.Property),
-				},
-				PropertyPath("root"),
+				model.NewSchema(),
+				NewPropertyPath("root"),
 				c.Schemas[unknown.RequestBody],
 			)
 
-			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
+			resources = append(resources, NewResource(newResourcePath, schema))
 		}
 
 		newResourcePath := resourcePath.Append("post", "responses")
@@ -168,14 +126,12 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 				0,
 				unknown.RequestBody,
 				c.Schemas,
-				model.Schema{
-					Properties: make(map[string]model.Property),
-				},
-				PropertyPath("root"),
+				model.NewSchema(),
+				NewPropertyPath("root"),
 				c.Schemas[unknown.RequestBody],
 			)
 
-			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
+			resources = append(resources, NewResource(newResourcePath, schema))
 		}
 
 		newResourcePath := resourcePath.Append("put", "responses")
@@ -196,43 +152,18 @@ func (c *Contract) buildResources(resources []model.Resource, resourcePath Resou
 				0,
 				schemaName,
 				c.Schemas,
-				model.Schema{
-					Properties: make(map[string]model.Property),
-				},
-				PropertyPath("root"),
+				model.NewSchema(),
+				NewPropertyPath("root"),
 				c.Schemas[schemaName],
 			)
 
-			resources = append(resources, model.NewResource(newResourcePath.String(), schema))
+			resources = append(resources, NewResource(newResourcePath, schema))
 		}
 
 		return resources
 	}
 
 	return resources
-}
-
-func (c *Contract) SchemasResolver(contractDsl Contract) map[string]model.Schema {
-	schemas := make(map[string]model.Schema)
-
-	for schemaName, schema := range contractDsl.Schemas {
-		hash := model.UuidFromStrings(schemaName)
-
-		schema := buildSchema(
-			0,
-			schemaName,
-			contractDsl.Schemas,
-			model.Schema{
-				Properties: make(map[string]model.Property),
-			},
-			PropertyPath("root"),
-			schema,
-		)
-
-		schemas[hash] = schema
-	}
-
-	return schemas
 }
 
 func buildSchema(
@@ -250,10 +181,7 @@ func buildSchema(
 	switch unknown := unknown.(type) {
 	case Schema:
 		if unknown.IsObject() {
-			schema.Properties[propertyPath.String()] = model.Property{
-				Path: propertyPath.String(),
-				Type: "object",
-			}
+			schema.Properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), "object")
 
 			for name, schemaProperties := range unknown.Properties {
 				schema = buildSchema(
@@ -270,10 +198,7 @@ func buildSchema(
 		}
 
 		if unknown.IsArray() {
-			schema.Properties[propertyPath.String()] = model.Property{
-				Path: propertyPath.String(),
-				Type: "array",
-			}
+			schema.Properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), "array")
 
 			schema = buildSchema(
 				deep+1,
@@ -288,10 +213,7 @@ func buildSchema(
 		}
 
 		if unknown.IsPrimitive() {
-			schema.Properties[propertyPath.String()] = model.Property{
-				Path: propertyPath.String(),
-				Type: unknown.Type,
-			}
+			schema.Properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), unknown.Type)
 
 			return schema
 		}
