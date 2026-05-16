@@ -1,0 +1,14 @@
+# Go build artifacts
+*.exe
+*.test
+*.out
+vendor/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+
+# OS noise
+.DS_Store
+Thumbs.db
