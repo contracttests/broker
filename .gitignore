@@ -12,3 +12,7 @@ vendor/
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Local env / secrets
+.env
+.env.*

@@ -12,18 +12,27 @@ import (
 func TestToContractModelEmpty(t *testing.T) {
 	got := (&dsl.Contract{}).ToContractModel()
 
-	assert.Empty(t, got.ConsumerRequests)
-	assert.Empty(t, got.ConsumerResponses)
-	assert.Empty(t, got.ProviderRequests)
-	assert.Empty(t, got.ProviderResponses)
+	assert.Empty(t, got.Resources)
+}
+
+func TestNamePassthrough(t *testing.T) {
+	payload := `{"name": "items-contract", "owner": "app"}`
+
+	var contract dsl.Contract
+	if !assert.NoError(t, json.Unmarshal([]byte(payload), &contract)) {
+		return
+	}
+
+	got := contract.ToContractModel()
+
+	assert.Equal(t, "items-contract", got.Name)
+	assert.Equal(t, "app", got.Owner)
 }
 
 func TestMappingMinimumConsumer(t *testing.T) {
 	payload := `
 	{
-		"api": {
-			"name": "consumer"
-		},
+		"owner": "consumer",
 		"consumes": {
 			"payments": {
 				"rest": {
@@ -63,53 +72,41 @@ func TestMappingMinimumConsumer(t *testing.T) {
 		return
 	}
 
-	expectedRequestSchema := model.Schema{
-		Properties: model.SchemaProperties{
-			"root":        {Path: "root", Type: "object", Optional: false},
-			"root.amount": {Path: "root.amount", Type: "integer", Optional: false},
-		},
+	expectedRequestProperties := map[string]model.Property{
+		"root":        {Path: "root", Type: "object", Optional: false},
+		"root.amount": {Path: "root.amount", Type: "integer", Optional: false},
 	}
-	expectedResponseSchema := model.Schema{
-		Properties: model.SchemaProperties{
-			"root":    {Path: "root", Type: "object", Optional: false},
-			"root.ok": {Path: "root.ok", Type: "boolean", Optional: false},
-		},
+	expectedResponseProperties := map[string]model.Property{
+		"root":    {Path: "root", Type: "object", Optional: false},
+		"root.ok": {Path: "root.ok", Type: "boolean", Optional: false},
 	}
 
-	expectedConsumerRequests := []model.ConsumerRequest{
-		{
-			Owner:        "consumer",
-			Provider:     "payments",
-			Schema:       expectedRequestSchema,
-			ResourceType: model.ConsumesRestRequest,
-			RestRequest:  model.RestRequest{Endpoint: "/charge", Method: "post"},
-		},
-	}
+	expected := model.Contract{Owner: "consumer"}
+	expected.AddResource(model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestRequest,
+		Provider:   "payments",
+		Endpoint:   "/charge",
+		Method:     "post",
+		Properties: expectedRequestProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestResponse,
+		Provider:   "payments",
+		Endpoint:   "/charge",
+		Method:     "post",
+		StatusCode: "200",
+		Properties: expectedResponseProperties,
+	})
 
-	expectedConsumerResponses := []model.ConsumerResponse{
-		{
-			Owner:        "consumer",
-			Provider:     "payments",
-			Schema:       expectedResponseSchema,
-			ResourceType: model.ConsumesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/charge", Method: "post", StatusCode: "200"},
-		},
-	}
-
-	contractModel := contract.ToContractModel()
-
-	assert.ElementsMatch(t, expectedConsumerRequests, contractModel.ConsumerRequests)
-	assert.ElementsMatch(t, expectedConsumerResponses, contractModel.ConsumerResponses)
-	assert.Empty(t, contractModel.ProviderRequests)
-	assert.Empty(t, contractModel.ProviderResponses)
+	assert.Equal(t, expected, contract.ToContractModel())
 }
 
 func TestMappingMinimumProvider(t *testing.T) {
 	payload := `
 	{
-		"api": {
-			"name": "provider"
-		},
+		"owner": "provider",
 		"provides": {
 			"rest": {
 				"/health": {
@@ -140,46 +137,36 @@ func TestMappingMinimumProvider(t *testing.T) {
 
 	got := contract.ToContractModel()
 
-	expectedResponseSchema := model.Schema{
-		Properties: model.SchemaProperties{
-			"root":        {
-				Path: "root", 
-				Type: "object", 
-				Optional: false,
-			},
-			"root.status": {
-				Path: "root.status", 
-				Type: "string", 
-				Optional: false,
-			},
+	expectedResponseProperties := map[string]model.Property{
+		"root": {
+			Path:     "root",
+			Type:     "object",
+			Optional: false,
+		},
+		"root.status": {
+			Path:     "root.status",
+			Type:     "string",
+			Optional: false,
 		},
 	}
 
-	expectedProviderResponses := []model.ProviderResponse{
-		{
-			Owner:        "provider",
-			Schema:       expectedResponseSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{
-				Endpoint:   "/health",
-				Method:     "get",
-				StatusCode: "200",
-			},
-		},
-	}
+	expected := model.Contract{Owner: "provider"}
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/health",
+		Method:     "get",
+		StatusCode: "200",
+		Properties: expectedResponseProperties,
+	})
 
-	assert.Empty(t, got.ConsumerRequests)
-	assert.Empty(t, got.ConsumerResponses)
-	assert.Empty(t, got.ProviderRequests)
-	assert.ElementsMatch(t, expectedProviderResponses, got.ProviderResponses)
+	assert.Equal(t, expected, got)
 }
 
 func TestMappingFull(t *testing.T) {
 	payload := `
 	{
-		"api": {
-			"name": "payments"
-		},
+		"owner": "payments",
 		"provides": {
 			"rest": {
 				"/payments": {
@@ -286,113 +273,113 @@ func TestMappingFull(t *testing.T) {
 	}
 	contractModel := contract.ToContractModel()
 
-	paymentRequestSchema := model.Schema{
-		Properties: model.SchemaProperties{
-			"root":             {Path: "root", Type: "object", Optional: false},
-			"root.amount":      {Path: "root.amount", Type: "integer", Optional: false},
-			"root.currency":    {Path: "root.currency", Type: "string", Optional: true},
-			"root.customer":    {Path: "root.customer", Type: "object", Optional: false},
-			"root.customer.id": {Path: "root.customer.id", Type: "string", Optional: false},
-		},
+	paymentRequestProperties := map[string]model.Property{
+		"root":             {Path: "root", Type: "object", Optional: false},
+		"root.amount":      {Path: "root.amount", Type: "integer", Optional: false},
+		"root.currency":    {Path: "root.currency", Type: "string", Optional: true},
+		"root.customer":    {Path: "root.customer", Type: "object", Optional: false},
+		"root.customer.id": {Path: "root.customer.id", Type: "string", Optional: false},
 	}
-	paymentSchema := model.Schema{
-		Properties: model.SchemaProperties{
-			"root":        {Path: "root", Type: "object", Optional: false},
-			"root.id":     {Path: "root.id", Type: "string", Optional: false},
-			"root.status": {Path: "root.status", Type: "string", Optional: true},
-		},
+	paymentProperties := map[string]model.Property{
+		"root":        {Path: "root", Type: "object", Optional: false},
+		"root.id":     {Path: "root.id", Type: "string", Optional: false},
+		"root.status": {Path: "root.status", Type: "string", Optional: true},
 	}
-	errorSchema := model.Schema{
-		Properties: model.SchemaProperties{
-			"root":         {Path: "root", Type: "object", Optional: false},
-			"root.code":    {Path: "root.code", Type: "string", Optional: false},
-			"root.message": {Path: "root.message", Type: "string", Optional: true},
-		},
+	errorProperties := map[string]model.Property{
+		"root":         {Path: "root", Type: "object", Optional: false},
+		"root.code":    {Path: "root.code", Type: "string", Optional: false},
+		"root.message": {Path: "root.message", Type: "string", Optional: true},
 	}
 
-	expectedProviderRequests := []model.ProviderRequest{
-		{
-			Owner:        "payments",
-			Schema:       paymentRequestSchema,
-			ResourceType: model.ProvidesRestRequest,
-			RestRequest:  model.RestRequest{Endpoint: "/payments", Method: "post"},
-		},
-		{
-			Owner:        "payments",
-			Schema:       paymentRequestSchema,
-			ResourceType: model.ProvidesRestRequest,
-			RestRequest:  model.RestRequest{Endpoint: "/payments", Method: "put"},
-		},
-	}
+	expected := model.Contract{Owner: "payments"}
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestRequest,
+		Endpoint:   "/payments",
+		Method:     "post",
+		Properties: paymentRequestProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestRequest,
+		Endpoint:   "/payments",
+		Method:     "put",
+		Properties: paymentRequestProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/payments",
+		Method:     "get",
+		StatusCode: "200",
+		Properties: paymentProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/payments",
+		Method:     "post",
+		StatusCode: "201",
+		Properties: paymentProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/payments",
+		Method:     "post",
+		StatusCode: "400",
+		Properties: errorProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/payments",
+		Method:     "put",
+		StatusCode: "200",
+		Properties: paymentProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/payments",
+		Method:     "put",
+		StatusCode: "404",
+		Properties: errorProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
+		Endpoint:   "/payments",
+		Method:     "delete",
+		StatusCode: "204",
+		Properties: paymentProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestRequest,
+		Provider:   "ledger",
+		Endpoint:   "/transactions",
+		Method:     "post",
+		Properties: paymentRequestProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestResponse,
+		Provider:   "ledger",
+		Endpoint:   "/transactions",
+		Method:     "get",
+		StatusCode: "200",
+		Properties: paymentProperties,
+	})
+	expected.AddResource(model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestResponse,
+		Provider:   "ledger",
+		Endpoint:   "/transactions",
+		Method:     "post",
+		StatusCode: "202",
+		Properties: paymentProperties,
+	})
 
-	expectedProviderResponses := []model.ProviderResponse{
-		{
-			Owner:        "payments",
-			Schema:       paymentSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/payments", Method: "get", StatusCode: "200"},
-		},
-		{
-			Owner:        "payments",
-			Schema:       paymentSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/payments", Method: "post", StatusCode: "201"},
-		},
-		{
-			Owner:        "payments",
-			Schema:       errorSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/payments", Method: "post", StatusCode: "400"},
-		},
-		{
-			Owner:        "payments",
-			Schema:       paymentSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/payments", Method: "put", StatusCode: "200"},
-		},
-		{
-			Owner:        "payments",
-			Schema:       errorSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/payments", Method: "put", StatusCode: "404"},
-		},
-		{
-			Owner:        "payments",
-			Schema:       paymentSchema,
-			ResourceType: model.ProvidesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/payments", Method: "delete", StatusCode: "204"},
-		},
-	}
-
-	expectedConsumerRequests := []model.ConsumerRequest{
-		{
-			Owner:        "payments",
-			Provider:     "ledger",
-			Schema:       paymentRequestSchema,
-			ResourceType: model.ConsumesRestRequest,
-			RestRequest:  model.RestRequest{Endpoint: "/transactions", Method: "post"},
-		},
-	}
-
-	expectedConsumerResponses := []model.ConsumerResponse{
-		{
-			Owner:        "payments",
-			Provider:     "ledger",
-			Schema:       paymentSchema,
-			ResourceType: model.ConsumesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/transactions", Method: "get", StatusCode: "200"},
-		},
-		{
-			Owner:        "payments",
-			Provider:     "ledger",
-			Schema:       paymentSchema,
-			ResourceType: model.ConsumesRestResponse,
-			RestResponse: model.RestResponse{Endpoint: "/transactions", Method: "post", StatusCode: "202"},
-		},
-	}
-
-	assert.ElementsMatch(t, expectedProviderRequests, contractModel.ProviderRequests)
-	assert.ElementsMatch(t, expectedProviderResponses, contractModel.ProviderResponses)
-	assert.ElementsMatch(t, expectedConsumerRequests, contractModel.ConsumerRequests)
-	assert.ElementsMatch(t, expectedConsumerResponses, contractModel.ConsumerResponses)
+	assert.Equal(t, expected, contractModel)
 }

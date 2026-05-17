@@ -26,98 +26,100 @@ func TestResourcePathSplit(t *testing.T) {
 }
 
 func TestResourcePathIsProviderRequest(t *testing.T) {
-	p := dsl.NewResourcePath("app;provides;rest;/items;post:request")
+	p := dsl.NewResourcePath("provides;rest;/items;post;request")
 	assert.True(t, p.IsProvider())
 	assert.False(t, p.IsConsumer())
 }
 
 func TestResourcePathIsProviderResponse(t *testing.T) {
-	p := dsl.NewResourcePath("app;provides;rest;/items;post:responses;200")
+	p := dsl.NewResourcePath("provides;rest;/items;post;responses;200")
 	assert.True(t, p.IsProvider())
 	assert.False(t, p.IsConsumer())
 }
 
 func TestResourcePathIsConsumerRequest(t *testing.T) {
-	p := dsl.NewResourcePath("app;consumes;api;rest;/items;post:request")
+	p := dsl.NewResourcePath("consumes;billing;rest;/items;post;request")
 	assert.False(t, p.IsProvider())
 	assert.True(t, p.IsConsumer())
 }
 
 func TestResourcePathIsConsumerResponse(t *testing.T) {
-	p := dsl.NewResourcePath("app;consumes;api;rest;/items;post:responses;200")
+	p := dsl.NewResourcePath("consumes;billing;rest;/items;post;responses;200")
 	assert.False(t, p.IsProvider())
 	assert.True(t, p.IsConsumer())
 }
 
-func TestResourcePathToConsumerRestRequestArgs(t *testing.T) {
-	p := dsl.NewResourcePath("payments;consumes;ledger;rest;/transactions;post;request")
-	args := p.ToConsumerRestRequestArgs()
-	assert.Equal(t, model.ConsumerRestRequestArgs{
-		Owner:    "payments",
-		Provider: "ledger",
-		Endpoint: "/transactions",
-		Method:   "post",
-	}, args)
+func TestResourcePathToResourceConsumerRequest(t *testing.T) {
+	p := dsl.NewResourcePath("consumes;ledger;rest;/transactions;post;request")
+	properties := map[string]model.Property{}
+
+	got := p.ToResource(properties)
+
+	expected := model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestRequest,
+		Provider:   "ledger",
+		Endpoint:   "/transactions",
+		Method:     "post",
+		Properties: properties,
+	}
+	assert.Equal(t, expected, got)
 }
 
-func TestResourcePathToConsumerRestResponseArgs(t *testing.T) {
-	p := dsl.NewResourcePath("payments;consumes;ledger;rest;/transactions;post;responses;200")
-	args := p.ToConsumerRestResponseArgs()
-	assert.Equal(t, model.ConsumerRestResponseArgs{
-		Owner:      "payments",
+func TestResourcePathToResourceConsumerResponse(t *testing.T) {
+	p := dsl.NewResourcePath("consumes;ledger;rest;/transactions;post;responses;200")
+	properties := map[string]model.Property{}
+
+	got := p.ToResource(properties)
+
+	expected := model.Resource{
+		Direction:  model.Consumes,
+		Kind:       model.RestResponse,
 		Provider:   "ledger",
 		Endpoint:   "/transactions",
 		Method:     "post",
 		StatusCode: "200",
-	}, args)
+		Properties: properties,
+	}
+	assert.Equal(t, expected, got)
 }
 
-func TestResourcePathToProviderRestRequestArgs(t *testing.T) {
-	p := dsl.NewResourcePath("payments;provides;rest;/transactions;post;request")
-	args := p.ToProviderRestRequestArgs()
-	assert.Equal(t, model.ProviderRestRequestArgs{
-		Owner:    "payments",
-		Endpoint: "/transactions",
-		Method:   "post",
-	}, args)
+func TestResourcePathToResourceProviderRequest(t *testing.T) {
+	p := dsl.NewResourcePath("provides;rest;/transactions;post;request")
+	properties := map[string]model.Property{}
+
+	got := p.ToResource(properties)
+
+	expected := model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestRequest,
+		Endpoint:   "/transactions",
+		Method:     "post",
+		Properties: properties,
+	}
+	assert.Equal(t, expected, got)
 }
 
-func TestResourcePathToProviderRestResponseArgs(t *testing.T) {
-	p := dsl.NewResourcePath("payments;provides;rest;/transactions;post;responses;200")
-	args := p.ToProviderRestResponseArgs()
-	assert.Equal(t, model.ProviderRestResponseArgs{
-		Owner:      "payments",
+func TestResourcePathToResourceProviderResponse(t *testing.T) {
+	p := dsl.NewResourcePath("provides;rest;/transactions;post;responses;200")
+	properties := map[string]model.Property{}
+
+	got := p.ToResource(properties)
+
+	expected := model.Resource{
+		Direction:  model.Provides,
+		Kind:       model.RestResponse,
 		Endpoint:   "/transactions",
 		Method:     "post",
 		StatusCode: "200",
-	}, args)
+		Properties: properties,
+	}
+	assert.Equal(t, expected, got)
 }
 
-
-func TestResourcePathToConsumerRestRequestArgsInvalid(t *testing.T) {
-	p := dsl.NewResourcePath("payments;consumes;ledger;rest;/transactions;post")
+func TestResourcePathToResourceUnrecognized(t *testing.T) {
+	p := dsl.NewResourcePath("rest;/transactions;post;responses;200")
 	assert.Panics(t, func() {
-		p.ToConsumerRestRequestArgs()
-	})
-}
-
-func TestResourcePathToConsumerRestResponseArgsInvalid(t *testing.T) {
-	p := dsl.NewResourcePath("payments;consumes;ledger;rest;/transactions;responses;200")
-	assert.Panics(t, func() {
-		p.ToConsumerRestResponseArgs()
-	})
-}
-
-func TestResourcePathToProviderRestRequestArgsInvalid(t *testing.T) {
-	p := dsl.NewResourcePath("payments;provide;rest;/transactions;post;request")
-	assert.Panics(t, func() {
-		p.ToProviderRestRequestArgs()
-	})
-}
-
-func TestResourcePathToProviderRestResponseArgsInvalid(t *testing.T) {
-	p := dsl.NewResourcePath("payments;rest;/transactions;post;responses;200")
-	assert.Panics(t, func() {
-		p.ToProviderRestResponseArgs()
+		p.ToResource(map[string]model.Property{})
 	})
 }

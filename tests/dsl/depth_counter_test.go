@@ -23,9 +23,7 @@ func TestDepthCounterEnterAtLimitPanics(t *testing.T) {
 func TestToContractModelPanicsWhenSchemaIsTooDeep(t *testing.T) {
 	payload := `
 	{
-		"api": {
-			"name": "test"
-		},
+		"owner": "test",
 		"provides": {
 			"rest": {
 				"/deep": {

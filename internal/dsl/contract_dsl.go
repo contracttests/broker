@@ -7,19 +7,20 @@ import (
 	"github.com/contracttests/broker/server/internal/model"
 )
 
-type Api struct {
-	Name string `json:"name,omitzero"`
-}
-
 type Contract struct {
-	Api              Api                 `json:"api,omitzero"`
+	Name             string              `json:"name,omitzero"`
+	Owner            string              `json:"owner"`
 	Provides         Provides            `json:"provides,omitzero"`
 	ConsumesServices ConsumesServicesMap `json:"consumes,omitzero"`
 	Schemas          SchemasMap          `json:"schemas,omitzero"`
 }
 
 func (c *Contract) ToContractModel() model.Contract {
-	contract := model.Contract{}
+	contract := model.Contract{
+		Name:  c.Name,
+		Owner: c.Owner,
+	}
+
 	c.buildResources(&contract, NewResourcePath(""), *c)
 	return contract
 }
@@ -28,7 +29,6 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 	switch unknown := unknown.(type) {
 	case Contract:
 		dsl := unknown
-		resourcePath = resourcePath.Append(dsl.Api.Name)
 
 		for serviceName, consumes := range dsl.ConsumesServices {
 			consumerResourcePath := resourcePath.Append("consumes", serviceName)
@@ -95,29 +95,19 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 		if postMethod.HasRequestBody() {
 			requestResourcePath := resourcePath.Append("post", "request")
 
-			schema := buildSchema(
+			properties := buildSchema(
 				NewDepthCounter(postMethod.RequestBody),
 				c.Schemas,
-				model.NewSchema(),
+				make(map[string]model.Property),
 				NewPropertyPath("root"),
 				c.Schemas[postMethod.RequestBody],
 			)
 
-			if requestResourcePath.IsConsumer() {
-				consumerRestRequestArgs := requestResourcePath.ToConsumerRestRequestArgs()
-				consumerRestRequest := model.NewConsumerRestRequest(consumerRestRequestArgs, schema)
-				contractModel.ConsumerRequests = append(contractModel.ConsumerRequests, consumerRestRequest)
-			}
-
-			if requestResourcePath.IsProvider() {
-				providerRestRequestArgs := requestResourcePath.ToProviderRestRequestArgs()
-				providerRestRequest := model.NewProviderRestRequest(providerRestRequestArgs, schema)
-				contractModel.ProviderRequests = append(contractModel.ProviderRequests, providerRestRequest)
-			}
+			contractModel.AddResource(requestResourcePath.ToResource(properties))
 		}
 
 		c.buildResources(
-			contractModel, 
+			contractModel,
 			resourcePath.Append("post", "responses"),
 			postMethod.Responses,
 		)
@@ -127,29 +117,19 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 		if putMethod.HasRequestBody() {
 			requestResourcePath := resourcePath.Append("put", "request")
 
-			schema := buildSchema(
+			properties := buildSchema(
 				NewDepthCounter(putMethod.RequestBody),
 				c.Schemas,
-				model.NewSchema(),
+				make(map[string]model.Property),
 				NewPropertyPath("root"),
 				c.Schemas[putMethod.RequestBody],
 			)
 
-			if requestResourcePath.IsConsumer() {
-				consumerRestRequestArgs := requestResourcePath.ToConsumerRestRequestArgs()
-				consumerRestRequest := model.NewConsumerRestRequest(consumerRestRequestArgs, schema)
-				contractModel.ConsumerRequests = append(contractModel.ConsumerRequests, consumerRestRequest)
-			}
-
-			if requestResourcePath.IsProvider() {
-				providerRestRequestArgs := requestResourcePath.ToProviderRestRequestArgs()
-				providerRestRequest := model.NewProviderRestRequest(providerRestRequestArgs, schema)
-				contractModel.ProviderRequests = append(contractModel.ProviderRequests, providerRestRequest)
-			}
+			contractModel.AddResource(requestResourcePath.ToResource(properties))
 		}
 
 		c.buildResources(
-			contractModel, 
+			contractModel,
 			resourcePath.Append("put", "responses"),
 			putMethod.Responses,
 		)
@@ -163,23 +143,15 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 		responses := unknown
 		for statusCode, schemaName := range responses {
 			responseResourcePath := resourcePath.Append(strconv.Itoa(statusCode))
-			schema := buildSchema(
+			properties := buildSchema(
 				NewDepthCounter(schemaName),
 				c.Schemas,
-				model.NewSchema(),
+				make(map[string]model.Property),
 				NewPropertyPath("root"),
 				c.Schemas[schemaName],
 			)
 
-			if responseResourcePath.IsConsumer() {
-				consumerRestResponse := model.NewConsumerRestResponse(responseResourcePath.ToConsumerRestResponseArgs(), schema)
-				contractModel.ConsumerResponses = append(contractModel.ConsumerResponses, consumerRestResponse)
-			}
-
-			if responseResourcePath.IsProvider() {
-				providerRestResponse := model.NewProviderRestResponse(responseResourcePath.ToProviderRestResponseArgs(), schema)
-				contractModel.ProviderResponses = append(contractModel.ProviderResponses, providerRestResponse)
-			}
+			contractModel.AddResource(responseResourcePath.ToResource(properties))
 		}
 	}
 }
@@ -187,70 +159,70 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 func buildSchema(
 	dethCounter *DepthCounter,
 	schemas SchemasMap,
-	schema model.Schema,
+	properties map[string]model.Property,
 	propertyPath PropertyPath,
 	unknown any,
-) model.Schema {
+) map[string]model.Property {
 	switch unknown := unknown.(type) {
 	case Schema:
 		if unknown.IsObject() {
-			schema.AddProperty(model.NewProperty(propertyPath.String(), "object", unknown.Optional))
+			properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), "object", unknown.Optional)
 
 			for name, schemaProperties := range unknown.Properties {
 				dethCounter.Enter()
-				schema = buildSchema(
+				properties = buildSchema(
 					dethCounter,
 					schemas,
-					schema,
+					properties,
 					propertyPath.Append(name),
 					schemaProperties,
 				)
 			}
 
-			return schema
+			return properties
 		}
 
 		if unknown.IsArray() {
-			schema.AddProperty(model.NewProperty(propertyPath.String(), "array", unknown.Optional))
+			properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), "array", unknown.Optional)
 
 			dethCounter.Enter()
-			schema = buildSchema(
+			properties = buildSchema(
 				dethCounter,
 				schemas,
-				schema,
+				properties,
 				propertyPath.AppendArray(),
 				unknown.Items,
 			)
 
-			return schema
+			return properties
 		}
 
 		if unknown.IsPrimitive() {
-			schema.AddProperty(model.NewProperty(propertyPath.String(), unknown.Type, unknown.Optional))
+			properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), unknown.Type, unknown.Optional)
 
-			return schema
+			return properties
 		}
 
 		if unknown.IsRef() {
 			dethCounter.Enter()
-			schema = buildSchema(
+			properties = buildSchema(
 				dethCounter,
 				schemas,
-				schema,
+				properties,
 				propertyPath,
 				schemas[unknown.Ref],
 			)
 
-			return schema
+			return properties
 		}
 
-		return schema
+		return properties
 	case *Schema:
 		dethCounter.Enter()
 		return buildSchema(
 			dethCounter,
 			schemas,
-			schema,
+			properties,
 			propertyPath,
 			*unknown,
 		)

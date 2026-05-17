@@ -9,18 +9,18 @@ import (
 )
 
 var (
-    consumerRestRequestRegex = regexp.MustCompile(
-        `^(?P<owner>[^;]+);consumes;(?P<provider>[^;]+);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
-    )
-    consumerRestResponseRegex = regexp.MustCompile(
-        `^(?P<owner>[^;]+);consumes;(?P<provider>[^;]+);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);responses;(?P<status>\d+)$`,
-    )
-    providerRestRequestRegex = regexp.MustCompile(
-        `^(?P<owner>[^;]+);provides;rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
-    )
-    providerRestResponseRegex = regexp.MustCompile(
-        `^(?P<owner>[^;]+);provides;rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);responses;(?P<status>\d+)$`,
-    )
+	consumerRestRequestRegex = regexp.MustCompile(
+		`^consumes;(?P<provider>[^;]+);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
+	)
+	consumerRestResponseRegex = regexp.MustCompile(
+		`^consumes;(?P<provider>[^;]+);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);responses;(?P<status>\d+)$`,
+	)
+	providerRestRequestRegex = regexp.MustCompile(
+		`^provides;rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
+	)
+	providerRestResponseRegex = regexp.MustCompile(
+		`^provides;rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);responses;(?P<status>\d+)$`,
+	)
 )
 
 type ResourcePath string
@@ -58,75 +58,39 @@ func (rp *ResourcePath) IsProvider() bool {
 }
 
 func (rp *ResourcePath) ExtractNamedArgs(regex *regexp.Regexp) (map[string]string, bool) {
-    match := regex.FindStringSubmatch(rp.String())
-    if match == nil {
-        return nil, false
-    }
+	match := regex.FindStringSubmatch(rp.String())
+	if match == nil {
+		return nil, false
+	}
 
-    args := make(map[string]string, len(regex.SubexpNames()))
-    for i, name := range regex.SubexpNames() {
-        if name == "" {
+	args := make(map[string]string, len(regex.SubexpNames()))
+	for i, name := range regex.SubexpNames() {
+		if name == "" {
 			continue
-        }
+		}
 
-        args[name] = match[i]
-    }
+		args[name] = match[i]
+	}
 
-    return args, true
+	return args, true
 }
 
-func (rp *ResourcePath) ToConsumerRestRequestArgs() model.ConsumerRestRequestArgs {
-	args, ok := rp.ExtractNamedArgs(consumerRestRequestRegex)
-	if !ok {
-		panic(fmt.Errorf("invalid consumer rest request path: %q", rp.String()))
+func (rp *ResourcePath) ToResource(properties map[string]model.Property) model.Resource {
+	if args, ok := rp.ExtractNamedArgs(consumerRestRequestRegex); ok {
+		return model.NewConsumedRestRequest(args["provider"], args["endpoint"], args["method"], properties)
 	}
 
-	return model.ConsumerRestRequestArgs{
-		Owner:    args["owner"],
-		Provider: args["provider"],
-		Endpoint: args["endpoint"],
-		Method:   args["method"],
-	}
-}
-
-func (rp *ResourcePath) ToConsumerRestResponseArgs() model.ConsumerRestResponseArgs {
-    args, ok := rp.ExtractNamedArgs(consumerRestResponseRegex)
-    if !ok {
-        panic(fmt.Errorf("invalid consumer rest response path: %q", rp.String()))
-    }
-
-    return model.ConsumerRestResponseArgs{
-        Owner:      args["owner"],
-        Provider:   args["provider"],
-        Endpoint:   args["endpoint"],
-        Method:     args["method"],
-        StatusCode: args["status"],
-    }
-}
-
-func (rp *ResourcePath) ToProviderRestRequestArgs() model.ProviderRestRequestArgs {
-	args, ok := rp.ExtractNamedArgs(providerRestRequestRegex)
-	if !ok {
-		panic(fmt.Errorf("invalid provider rest request path: %q", rp.String()))
+	if args, ok := rp.ExtractNamedArgs(consumerRestResponseRegex); ok {
+		return model.NewConsumedRestResponse(args["provider"], args["endpoint"], args["method"], args["status"], properties)
 	}
 
-	return model.ProviderRestRequestArgs{
-		Owner:    args["owner"],
-		Endpoint: args["endpoint"],
-		Method:   args["method"],
-	}
-}
-
-func (rp *ResourcePath) ToProviderRestResponseArgs() model.ProviderRestResponseArgs {
-	args, ok := rp.ExtractNamedArgs(providerRestResponseRegex)
-	if !ok {
-		panic(fmt.Errorf("invalid provider rest response path: %q", rp.String()))
+	if args, ok := rp.ExtractNamedArgs(providerRestRequestRegex); ok {
+		return model.NewProvidedRestRequest(args["endpoint"], args["method"], properties)
 	}
 
-	return model.ProviderRestResponseArgs{
-		Owner:      args["owner"],
-		Endpoint:   args["endpoint"],
-		Method:     args["method"],
-		StatusCode: args["status"],
+	if args, ok := rp.ExtractNamedArgs(providerRestResponseRegex); ok {
+		return model.NewProvidedRestResponse(args["endpoint"], args["method"], args["status"], properties)
 	}
+
+	panic(fmt.Errorf("unrecognized resource path: %q", rp.String()))
 }
