@@ -1,4 +1,4 @@
-package upload_contract_test
+package integration_test
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 
 	"github.com/contracttests/broker/server/internal"
 	"github.com/contracttests/broker/server/internal/components"
+	"github.com/contracttests/broker/server/internal/repository"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
@@ -21,7 +23,9 @@ import (
 
 type Suite struct {
 	suite.Suite
-	Components *components.Components
+	Pool              *pgxpool.Pool
+	Repo              *repository.ContractRepository
+	Components        *components.Components
 	PostgresContainer *postgres.PostgresContainer
 }
 
@@ -29,7 +33,7 @@ func TestSuite(t *testing.T) {
 	suite.Run(t, new(Suite))
 }
 
-func (suite *Suite) StartPostgressContainer() (*postgres.PostgresContainer) {
+func (suite *Suite) StartPostgressContainer() *postgres.PostgresContainer {
 	ctx := context.Background()
 
 	postgresContainer, err := postgres.Run(
@@ -62,6 +66,8 @@ func (suite *Suite) SetupTest() {
 	os.Setenv("MIGRATIONS_DIR", "../../migrations")
 	suite.PostgresContainer = suite.StartPostgressContainer()
 	suite.Components = internal.Run()
+	suite.Pool = suite.Components.Pool
+	suite.Repo = repository.NewContractRepository(suite.Pool)
 }
 
 func (suite *Suite) TearDownTest() {
@@ -73,15 +79,15 @@ func (suite *Suite) TearDownTest() {
 }
 
 type Request struct {
-	Method string
-	Path string
-	Body string
+	Method  string
+	Path    string
+	Body    string
 	Headers map[string]string
 }
 
 type Response struct {
 	StatusCode int
-	Body string
+	Body       string
 }
 
 func (suite *Suite) Request(args Request) (*Response, error) {
@@ -103,6 +109,6 @@ func (suite *Suite) Request(args Request) (*Response, error) {
 
 	return &Response{
 		StatusCode: response.StatusCode,
-		Body: string(body),
+		Body:       string(body),
 	}, nil
 }

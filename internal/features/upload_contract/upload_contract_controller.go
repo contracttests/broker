@@ -32,26 +32,10 @@ func (ctr *UploadContractController) Handle(ctx fiber.Ctx) error {
 		})
 	}
 
-	existing, err := ctr.repo.FindByName(ctx.Context(), contract.Name)
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(wireout.UploadResponse{
-			Success: false,
-			Message: string(wireout.ContractUploadFailed),
-		})
-	}
-
-	if existing != nil {
-		return ctx.Status(fiber.StatusOK).JSON(wireout.UploadResponse{
-			Success: true,
-			Message: string(wireout.ContractAlreadyUploaded),
-		})
-	}
-
-	if err := ctr.repo.Save(ctx.Context(), &contract, ctx.Body()); err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(wireout.UploadResponse{
-			Success: false,
-			Message: string(wireout.ContractUploadFailed),
-		})
+	if existing := ctr.repo.FindByName(ctx.Context(), contract.Name); existing != nil {
+		ctr.repo.Update(ctx.Context(), &contract, ctx.Body())
+	} else {
+		ctr.repo.Save(ctx.Context(), &contract, ctx.Body())
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(wireout.UploadResponse{
