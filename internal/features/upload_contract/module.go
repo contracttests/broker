@@ -1,8 +1,8 @@
 package upload_contract
 
 import (
-	"github.com/contracttests/broker/server/internal/components"
-	"github.com/contracttests/broker/server/internal/repository"
+	"github.com/contracttesting/broker/server/internal/components"
+	"github.com/contracttesting/broker/server/internal/repository"
 )
 
 func Register(components *components.Components) {

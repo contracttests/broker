@@ -1,10 +1,10 @@
 package upload_contract
 
 import (
-	"github.com/contracttests/broker/server/internal/dsl"
-	"github.com/contracttests/broker/server/internal/features/upload_contract/wireout"
-	"github.com/contracttests/broker/server/internal/model"
-	"github.com/contracttests/broker/server/internal/repository"
+	"github.com/contracttesting/broker/server/internal/dsl"
+	"github.com/contracttesting/broker/server/internal/features/upload_contract/wireout"
+	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/contracttesting/broker/server/internal/repository"
 	"github.com/gofiber/fiber/v3"
 )
 

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/contracttests/broker/server/internal/features/upload_contract/wireout"
-	"github.com/contracttests/broker/server/internal/model"
+	"github.com/contracttesting/broker/server/internal/features/upload_contract/wireout"
+	"github.com/contracttesting/broker/server/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -1,7 +1,7 @@
 package wiredb
 
 import (
-	"github.com/contracttests/broker/server/internal/model"
+	"github.com/contracttesting/broker/server/internal/model"
 	"github.com/google/uuid"
 )
 

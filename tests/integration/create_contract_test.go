@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/contracttests/broker/server/internal/dsl"
-	"github.com/contracttests/broker/server/internal/model"
+	"github.com/contracttesting/broker/server/internal/dsl"
+	"github.com/contracttesting/broker/server/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 

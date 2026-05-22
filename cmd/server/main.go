@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/contracttests/broker/server/internal"
+	"github.com/contracttesting/broker/server/internal"
 	"github.com/joho/godotenv"
 )
 

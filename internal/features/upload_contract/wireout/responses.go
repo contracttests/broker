@@ -1,7 +1,7 @@
 package wireout
 
 import (
-	"github.com/contracttests/broker/server/internal/model"
+	"github.com/contracttesting/broker/server/internal/model"
 )
 
 type ContractMessage string

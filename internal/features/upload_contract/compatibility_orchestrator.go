@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/contracttests/broker/server/internal/model"
-	"github.com/contracttests/broker/server/internal/repository"
+	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/contracttesting/broker/server/internal/repository"
 )
 
 type CompatibilityChecker struct {
