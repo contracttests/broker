@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/contracttesting/broker/server/internal"
 	"github.com/joho/godotenv"
 )
@@ -8,5 +10,7 @@ import (
 func main() {
 	godotenv.Load()
 	components := internal.Run()
-	components.Server.Listen(":3000")
+	if err := components.Server.Listen(":9000"); err != nil {
+		log.Fatalf("server: %v", err)
+	}
 }

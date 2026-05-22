@@ -30,6 +30,7 @@ func createDatabasePool() *pgxpool.Pool {
 
 func createHttpServer() *fiber.App {
 	server := fiber.New()
+
 	return server
 }
 
