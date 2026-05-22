@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/contracttests/broker/server/pkg/migrator"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Components struct {
 	Server *fiber.App
-	Pool *pgxpool.Pool
+	Pool   *pgxpool.Pool
 }
 
 func createDatabasePool() *pgxpool.Pool {
@@ -32,12 +33,32 @@ func createHttpServer() *fiber.App {
 	return server
 }
 
+func runMigrations(pool *pgxpool.Pool) {
+	migrationsDir := os.Getenv("MIGRATIONS_DIR")
+
+	if migrationsDir == "" {
+		migrationsDir = "migrations"
+	}
+
+	m := migrator.New(
+		pool,
+		migrationsDir,
+		"schema_migrations",
+	)
+
+	if err := m.Migrate(); err != nil {
+		panic(fmt.Errorf("Failed to run migrations: %v", err))
+	}
+}
+
 func New() *Components {
 	pool := createDatabasePool()
 	server := createHttpServer()
 
+	runMigrations(pool)
+
 	return &Components{
 		Server: server,
-		Pool: pool,
+		Pool:   pool,
 	}
 }

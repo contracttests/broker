@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/contracttests/broker/server/internal"
 	"github.com/contracttests/broker/server/internal/components"
 	"github.com/contracttests/broker/server/internal/repository"
+	"github.com/contracttests/broker/server/pkg/rootpath"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/suite"
@@ -27,6 +29,7 @@ type Suite struct {
 	Repo              *repository.ContractRepository
 	Components        *components.Components
 	PostgresContainer *postgres.PostgresContainer
+	DB                *DBAssertions
 }
 
 func TestSuite(t *testing.T) {
@@ -63,11 +66,13 @@ func (suite *Suite) StartPostgressContainer() *postgres.PostgresContainer {
 
 func (suite *Suite) SetupTest() {
 	godotenv.Load()
-	os.Setenv("MIGRATIONS_DIR", "../../migrations")
+	rootDir := rootpath.Discover()
+	os.Setenv("MIGRATIONS_DIR", filepath.Join(rootDir, "migrations"))
 	suite.PostgresContainer = suite.StartPostgressContainer()
 	suite.Components = internal.Run()
 	suite.Pool = suite.Components.Pool
 	suite.Repo = repository.NewContractRepository(suite.Pool)
+	suite.DB = newDBAssertions(suite)
 }
 
 func (suite *Suite) TearDownTest() {

@@ -3,24 +3,69 @@ package model
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"sort"
+	"strings"
+
+	"github.com/google/uuid"
 )
 
-type Contract struct {
-	Name      string              `json:"name"`
-	Owner     string              `json:"owner"`
-	Resources map[string]Resource `json:"resources,omitzero"`
+type ContractInfo struct {
+	Name  string
+	Owner string
 }
 
-func (c *Contract) AddResource(r Resource) {
+type Contract struct {
+	ID         int64
+	UUID       uuid.UUID
+	Name       string
+	Owner      string
+	RawPayload string
+	Resources  map[string]Resource
+}
+
+func NewContract(name string, owner string, rawPayload string) *Contract {
+	return &Contract{
+		Name:       name,
+		Owner:      owner,
+		RawPayload: rawPayload,
+	}
+}
+
+func (c *Contract) AddResource(r Resource) string {
 	if c.Resources == nil {
 		c.Resources = make(map[string]Resource)
 	}
-	c.Resources[r.Key()] = r
+	r.ContractInfo = &ContractInfo{Name: c.Name, Owner: c.Owner}
+	key := r.PrimaryHash()
+	c.Resources[key] = r
+	return key
+}
+
+func (r Resource) PrimaryHash() string {
+	if r.Direction == Provides {
+		return r.ProviderHash()
+	}
+
+	return r.ConsumerHash()
+}
+
+func (c *Contract) CanonicalKey() string {
+	resourceKeys := make([]string, 0, len(c.Resources))
+
+	for _, resource := range c.Resources {
+		resourceKeys = append(resourceKeys, resource.CanonicalKey())
+	}
+
+	sort.Strings(resourceKeys)
+
+	return strings.Join([]string{
+		c.Name,
+		c.Owner,
+		strings.Join(resourceKeys, ";;"),
+	}, ";;")
 }
 
 func (c *Contract) Checksum() string {
-	payload, _ := json.Marshal(c)
-	sum := sha256.Sum256(payload)
+	sum := sha256.Sum256([]byte(c.CanonicalKey()))
 	return hex.EncodeToString(sum[:])
 }

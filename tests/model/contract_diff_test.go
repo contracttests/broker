@@ -22,11 +22,11 @@ func TestDiff_ResourceAdded(t *testing.T) {
 		},
 	}
 	next := model.Contract{Name: "c", Owner: "app"}
-	next.AddResource(added)
+	key := next.AddResource(added)
 
 	diff := prev.Diff(&next)
 
-	got, ok := diff.Resources[added.Key()]
+	got, ok := diff.Resources[key]
 	if assert.True(t, ok) {
 		assert.Equal(t, model.ChangeAdded, got.Kind)
 		assert.Len(t, got.Properties, 2)
@@ -49,13 +49,13 @@ func TestDiff_ResourceRemoved(t *testing.T) {
 		},
 	}
 	prev := model.Contract{Name: "c", Owner: "app"}
-	prev.AddResource(removed)
+	key := prev.AddResource(removed)
 
 	next := model.Contract{Name: "c", Owner: "app"}
 
 	diff := prev.Diff(&next)
 
-	got, ok := diff.Resources[removed.Key()]
+	got, ok := diff.Resources[key]
 	if assert.True(t, ok) {
 		assert.Equal(t, model.ChangeRemoved, got.Kind)
 		assert.Len(t, got.Properties, 2)
@@ -91,11 +91,11 @@ func TestDiff_ResourceChanged(t *testing.T) {
 		},
 	}
 	next := model.Contract{Name: "c", Owner: "app"}
-	next.AddResource(changed)
+	key := next.AddResource(changed)
 
 	diff := prev.Diff(&next)
 
-	got, ok := diff.Resources[changed.Key()]
+	got, ok := diff.Resources[key]
 	if assert.True(t, ok) {
 		assert.Equal(t, model.ChangeModified, got.Kind)
 	}
@@ -126,11 +126,11 @@ func TestDiff_PropertyAdded(t *testing.T) {
 		},
 	}
 	next := model.Contract{Name: "c", Owner: "app"}
-	next.AddResource(updated)
+	key := next.AddResource(updated)
 
 	diff := prev.Diff(&next)
 
-	got, ok := diff.Resources[updated.Key()]
+	got, ok := diff.Resources[key]
 	if assert.True(t, ok) {
 		assert.Equal(t, model.ChangeModified, got.Kind)
 		if assert.Len(t, got.Properties, 1) {
@@ -166,11 +166,11 @@ func TestDiff_PropertyRemoved(t *testing.T) {
 		},
 	}
 	next := model.Contract{Name: "c", Owner: "app"}
-	next.AddResource(updated)
+	key := next.AddResource(updated)
 
 	diff := prev.Diff(&next)
 
-	got, ok := diff.Resources[updated.Key()]
+	got, ok := diff.Resources[key]
 	if assert.True(t, ok) {
 		assert.Equal(t, model.ChangeModified, got.Kind)
 		if assert.Len(t, got.Properties, 1) {
@@ -205,11 +205,11 @@ func TestDiff_PropertyChanged(t *testing.T) {
 		},
 	}
 	next := model.Contract{Name: "c", Owner: "app"}
-	next.AddResource(updated)
+	key := next.AddResource(updated)
 
 	diff := prev.Diff(&next)
 
-	got, ok := diff.Resources[updated.Key()]
+	got, ok := diff.Resources[key]
 	if assert.True(t, ok) {
 		assert.Equal(t, model.ChangeModified, got.Kind)
 		if assert.Len(t, got.Properties, 1) {

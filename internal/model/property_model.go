@@ -1,15 +1,29 @@
 package model
 
+import (
+	"strconv"
+	"strings"
+)
+
 type Property struct {
-	Path     string `json:"path,omitzero"`
-	Type     string `json:"type,omitzero"`
-	Optional bool   `json:"optional"`
+	ID       int64
+	Path     string
+	Type     string
+	Optional bool
 }
 
-func (p *Property) IsSame(pp *Property) bool {
-	return p.Path == pp.Path &&
-		p.Type == pp.Type &&
-		p.Optional == pp.Optional
+func (p *Property) IsSame(other *Property) bool {
+	return p.Path == other.Path &&
+		p.Type == other.Type &&
+		p.Optional == other.Optional
+}
+
+func (p *Property) CanonicalKey() string {
+	return strings.Join([]string{
+		p.Path,
+		p.Type,
+		strconv.FormatBool(p.Optional),
+	}, ";;")
 }
 
 func NewProperty(

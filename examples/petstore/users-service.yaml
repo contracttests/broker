@@ -1,5 +1,5 @@
-api:
-  name: users-service
+name: users-service
+owner: users-team
 
 provides:
   rest:
@@ -7,21 +7,10 @@ provides:
       get:
         responses:
           '200': Users
-      post:
-        request: CreateUser
-        responses:
-          '201': User
-          '400': BadRequest
     "/users/{uuid}":
       get:
         responses:
           '200': User
-          '404': NotFound
-      put:
-        request: UpdateUser
-        responses:
-          '200': User
-          '400': BadRequest
           '404': NotFound
 
 schemas:
@@ -29,9 +18,8 @@ schemas:
     type: object
     properties:
       uuid:
-        type: number
-        optional: true
-      none:
+        type: string
+      email:
         type: string
 
   Users:
@@ -39,28 +27,6 @@ schemas:
     items:
       "$ref": User
 
-  CreateUser:
-    type: object
-    properties:
-      name:
-        type: string
-      email:
-        type: string
-
-  UpdateUser:
-    type: object
-    properties:
-      uuid:
-        type: string
-      name:
-        type: string
-      email:
-        type: string
-  BadRequest:
-    type: object
-    properties:
-      message:
-        type: string
   NotFound:
     type: object
     properties:

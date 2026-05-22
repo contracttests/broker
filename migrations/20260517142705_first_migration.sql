@@ -31,12 +31,17 @@ CREATE TABLE resources (
   endpoint      text NOT NULL,
   method        text NOT NULL,
   status_code   text,
+  provider_hash text NOT NULL,
+  consumer_hash text,
   created_at    timestamptz NOT NULL DEFAULT now(),
 
-  UNIQUE (contract_id, direction, kind, provider, endpoint, method, status_code)
+  CHECK ((direction = 'provides') = (consumer_hash IS NULL))
 );
 
 CREATE INDEX ON resources (contract_id);
+CREATE UNIQUE INDEX ON resources (provider_hash) WHERE direction = 'provides';
+CREATE UNIQUE INDEX ON resources (consumer_hash) WHERE direction = 'consumes';
+CREATE INDEX ON resources (provider_hash) WHERE direction = 'consumes';
 
 CREATE TABLE properties (
   id           BIGSERIAL PRIMARY KEY,

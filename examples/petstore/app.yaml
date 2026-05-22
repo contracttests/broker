@@ -1,80 +1,31 @@
-api:
-  name: app
+name: app
+owner: app-team
 
 consumes:
-  users-service: 
-    rest:
-      "/users":
-        get:
-          responses:
-            '200': Users
-        post:
-          request: CreateUser
-          responses:
-            '201': User
-            '400': BadRequest
-      "/users/{uuid}":
-        get:
-          responses:
-            '200': User
-            '404': NotFound
-        put:
-          request: UpdateUser
-          responses:
-            '200': User
-            '400': BadRequest
-            '404': NotFound
-
   pets-service:
     rest:
       "/pets":
         get:
           responses:
             '200': Pets
-        post:
-          request: CreatePet
-          responses:
-            '201': Pet
-            '400': BadRequest
       "/pets/{uuid}":
         get:
           responses:
             '200': Pet
             '404': NotFound
-        put:
-          request: UpdatePet
+  users-service:
+    rest:
+      "/users":
+        get:
           responses:
-            '200': Pet
-            '400': BadRequest
+            '200': Users
+      "/users/{uuid}":
+        get:
+          responses:
+            '200': User
             '404': NotFound
 
 schemas:
-  User:
-    type: object
-    properties:
-      uuid:
-        type: string
-      email:
-        type: string
-
-  Users:
-    type: array
-    items:
-      "$ref": User
-
-  CreateUser:
-    type: object
-    properties:
-      name:
-        type: string
-
-  UpdateUser:
-    type: object
-    properties:
-      uuid:
-        type: string
-      name:
-        type: string
   Pet:
     type: object
     properties:
@@ -82,51 +33,22 @@ schemas:
         type: string
       name:
         type: string
-      age:
-        type: integer
-      breed:
-        type: string
-      ownerUuid:
-        type: string
 
   Pets:
     type: array
     items:
       "$ref": Pet
 
-  CreatePet:
-    type: object
-    properties:
-      name:
-        type: string
-      age:
-        type: integer
-      breed:
-        type: string
-      owner:
-        type: string
-      other: 
-        type: string
-
-  UpdatePet:
+  User:
     type: object
     properties:
       uuid:
         type: string
-      name:
-        type: string
-      age:
-        type: integer
-      breed:
-        type: string
-      ownerUuid:
-        type: string
 
-  BadRequest:
-    type: object
-    properties:
-      message:
-        type: string
+  Users:
+    type: array
+    items:
+      "$ref": User
 
   NotFound:
     type: object

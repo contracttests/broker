@@ -6,10 +6,17 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const migrationTimestampLayout = "20060102150405"
+
+var migrationFilenamePattern = regexp.MustCompile(`^(\d{14})_([a-z0-9]+(?:_[a-z0-9]+)*)\.sql$`)
 
 const ensureMigrationsTableSQL = `
 CREATE SCHEMA IF NOT EXISTS %s;
@@ -30,7 +37,10 @@ type Migrator struct {
 	migrationsTable string
 }
 
-func New(pool *pgxpool.Pool, migrationsDir, migrationsTable string) *Migrator {
+func New(
+	pool *pgxpool.Pool,
+	migrationsDir, migrationsTable string,
+) *Migrator {
 	return &Migrator{
 		pool:            pool,
 		migrationsDir:   migrationsDir,
@@ -48,21 +58,36 @@ func (m *Migrator) Migrate() error {
 		return fmt.Errorf("error reading migrations directory: %w", err)
 	}
 
+	ctx := context.Background()
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting migrations transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	for _, migrationFile := range migrationFiles {
-		applied, err := m.isMigrationApplied(migrationFile)
+		applied, err := m.isMigrationApplied(ctx, tx, migrationFile)
 		if err != nil {
-			return fmt.Errorf("error checking if migration %s is applied: %w", migrationFile, err)
+			return fmt.Errorf(
+				"error checking if migration %s is applied: %w",
+				migrationFile,
+				err,
+			)
 		}
 
 		if applied {
 			continue
 		}
 
-		if err := m.applyMigration(migrationFile); err != nil {
+		if err := m.applyMigration(ctx, tx, migrationFile); err != nil {
 			return err
 		}
 
 		log.Printf("migrated %s", migrationFile)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error committing migrations: %w", err)
 	}
 
 	return nil
@@ -70,7 +95,11 @@ func (m *Migrator) Migrate() error {
 
 func (m *Migrator) ensureMigrationsTable() error {
 	schema := strings.SplitN(m.migrationsTable, ".", 2)[0]
-	sql := fmt.Sprintf(ensureMigrationsTableSQL, schema, m.migrationsTable)
+	sql := fmt.Sprintf(
+		ensureMigrationsTableSQL,
+		schema,
+		m.migrationsTable,
+	)
 
 	if _, err := m.pool.Exec(context.Background(), sql); err != nil {
 		return err
@@ -90,35 +119,52 @@ func (m *Migrator) getMigrationFiles() ([]string, error) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
 			continue
 		}
+		assertValidMigrationFilename(entry.Name())
 		migrationFiles = append(migrationFiles, filepath.Join(m.migrationsDir, entry.Name()))
 	}
 
 	return migrationFiles, nil
 }
 
-func (m *Migrator) isMigrationApplied(migrationFile string) (bool, error) {
+func assertValidMigrationFilename(name string) {
+	matches := migrationFilenamePattern.FindStringSubmatch(name)
+	if matches == nil {
+		panic(fmt.Sprintf(
+			"migrator: invalid migration filename %q: expected format YYYYMMDDHHMMSS_subject.sql (e.g. 20260520143022_add_users_table.sql)",
+			name,
+		))
+	}
+	if _, err := time.Parse(migrationTimestampLayout, matches[1]); err != nil {
+		panic(fmt.Sprintf(
+			"migrator: invalid migration timestamp in %q: %v",
+			name, err,
+		))
+	}
+}
+
+func (m *Migrator) isMigrationApplied(ctx context.Context, tx pgx.Tx, migrationFile string) (bool, error) {
 	sql := fmt.Sprintf(selectMigrationSQL, m.migrationsTable)
 
 	var count int
-	if err := m.pool.QueryRow(context.Background(), sql, migrationFile).Scan(&count); err != nil {
+	if err := tx.QueryRow(ctx, sql, migrationFile).Scan(&count); err != nil {
 		return false, err
 	}
 
 	return count > 0, nil
 }
 
-func (m *Migrator) applyMigration(migrationFile string) error {
+func (m *Migrator) applyMigration(ctx context.Context, tx pgx.Tx, migrationFile string) error {
 	contents, err := os.ReadFile(migrationFile)
 	if err != nil {
 		return fmt.Errorf("error reading migration file %s: %w", migrationFile, err)
 	}
 
-	if _, err := m.pool.Exec(context.Background(), string(contents)); err != nil {
+	if _, err := tx.Exec(ctx, string(contents)); err != nil {
 		return fmt.Errorf("error executing migration %s: %w", migrationFile, err)
 	}
 
 	sql := fmt.Sprintf(insertMigrationSQL, m.migrationsTable)
-	if _, err := m.pool.Exec(context.Background(), sql, migrationFile); err != nil {
+	if _, err := tx.Exec(ctx, sql, migrationFile); err != nil {
 		return fmt.Errorf("error recording migration %s: %w", migrationFile, err)
 	}
 

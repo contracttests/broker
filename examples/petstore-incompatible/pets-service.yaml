@@ -7,11 +7,6 @@ provides:
       get:
         responses:
           '200': Pets
-    "/pets/{uuid}":
-      get:
-        responses:
-          '200': Pet
-          '404': NotFound
 
 schemas:
   Pet:
@@ -21,18 +16,8 @@ schemas:
         type: string
       name:
         type: string
-      age:
-        type: integer
-      breed:
-        type: string
 
   Pets:
     type: array
     items:
       "$ref": Pet
-
-  NotFound:
-    type: object
-    properties:
-      message:
-        type: string

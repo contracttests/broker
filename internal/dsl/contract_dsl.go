@@ -22,36 +22,61 @@ func (c *Contract) ToContractModel() model.Contract {
 	}
 
 	c.buildResources(&contract, NewResourcePath(""), *c)
+
 	return contract
 }
 
-func (c *Contract) buildResources(contractModel *model.Contract, resourcePath ResourcePath, unknown any) {
+func (c *Contract) buildResources(
+	contractModel *model.Contract,
+	resourcePath ResourcePath,
+	unknown any,
+) {
 	switch unknown := unknown.(type) {
 	case Contract:
 		dsl := unknown
 
 		for serviceName, consumes := range dsl.ConsumesServices {
 			consumerResourcePath := resourcePath.Append("consumes", serviceName)
-			c.buildResources(contractModel, consumerResourcePath, consumes)
+			c.buildResources(
+				contractModel,
+				consumerResourcePath,
+				consumes,
+			)
 		}
 
-		c.buildResources(contractModel, resourcePath.Append("provides"), dsl.Provides)
+		c.buildResources(
+			contractModel,
+			resourcePath.Append("provides"),
+			dsl.Provides,
+		)
 
 	case Consumes:
 		consumes := unknown
-		c.buildResources(contractModel, resourcePath, consumes.Rest)
+		c.buildResources(
+			contractModel,
+			resourcePath,
+			consumes.Rest,
+		)
 
 	case Provides:
 		provides := unknown
-		c.buildResources(contractModel, resourcePath, provides.Rest)
-		c.buildResources(contractModel, resourcePath, provides.Message)
+		c.buildResources(
+			contractModel,
+			resourcePath,
+			provides.Rest,
+		)
+		c.buildResources(
+			contractModel,
+			resourcePath,
+			provides.Message,
+		)
 
 	case Rest:
 		rest := unknown
 		for endpoint, methods := range rest {
 			if methods.Get.IsNonZero() {
 				c.buildResources(
-					contractModel, 
+					contractModel,
 					resourcePath.Append("rest", endpoint),
 					methods.Get,
 				)
@@ -59,7 +84,7 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 
 			if methods.Post.IsNonZero() {
 				c.buildResources(
-					contractModel, 
+					contractModel,
 					resourcePath.Append("rest", endpoint),
 					methods.Post,
 				)
@@ -67,7 +92,7 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 
 			if methods.Put.IsNonZero() {
 				c.buildResources(
-					contractModel, 
+					contractModel,
 					resourcePath.Append("rest", endpoint),
 					methods.Put,
 				)
@@ -75,7 +100,7 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 
 			if methods.Delete.IsNonZero() {
 				c.buildResources(
-					contractModel, 
+					contractModel,
 					resourcePath.Append("rest", endpoint),
 					methods.Delete,
 				)
@@ -85,7 +110,7 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 	case GetMethod:
 		getMethod := unknown
 		c.buildResources(
-			contractModel, 
+			contractModel,
 			resourcePath.Append("get", "responses"),
 			getMethod.Responses,
 		)
@@ -137,7 +162,11 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 	case DeleteMethod:
 		deleteMethod := unknown
 		path := resourcePath.Append("delete", "responses")
-		c.buildResources(contractModel, path, deleteMethod.Responses)
+		c.buildResources(
+			contractModel,
+			path,
+			deleteMethod.Responses,
+		)
 
 	case Responses:
 		responses := unknown
@@ -157,7 +186,7 @@ func (c *Contract) buildResources(contractModel *model.Contract, resourcePath Re
 }
 
 func buildSchema(
-	dethCounter *DepthCounter,
+	depthCounter *DepthCounter,
 	schemas SchemasMap,
 	properties map[string]model.Property,
 	propertyPath PropertyPath,
@@ -166,12 +195,16 @@ func buildSchema(
 	switch unknown := unknown.(type) {
 	case Schema:
 		if unknown.IsObject() {
-			properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), "object", unknown.Optional)
+			properties[propertyPath.String()] = model.NewProperty(
+				propertyPath.String(),
+				"object",
+				unknown.Optional,
+			)
 
 			for name, schemaProperties := range unknown.Properties {
-				dethCounter.Enter()
+				depthCounter.Enter()
 				properties = buildSchema(
-					dethCounter,
+					depthCounter,
 					schemas,
 					properties,
 					propertyPath.Append(name),
@@ -183,11 +216,15 @@ func buildSchema(
 		}
 
 		if unknown.IsArray() {
-			properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), "array", unknown.Optional)
+			properties[propertyPath.String()] = model.NewProperty(
+				propertyPath.String(),
+				"array",
+				unknown.Optional,
+			)
 
-			dethCounter.Enter()
+			depthCounter.Enter()
 			properties = buildSchema(
-				dethCounter,
+				depthCounter,
 				schemas,
 				properties,
 				propertyPath.AppendArray(),
@@ -198,15 +235,19 @@ func buildSchema(
 		}
 
 		if unknown.IsPrimitive() {
-			properties[propertyPath.String()] = model.NewProperty(propertyPath.String(), unknown.Type, unknown.Optional)
+			properties[propertyPath.String()] = model.NewProperty(
+				propertyPath.String(),
+				unknown.Type,
+				unknown.Optional,
+			)
 
 			return properties
 		}
 
 		if unknown.IsRef() {
-			dethCounter.Enter()
+			depthCounter.Enter()
 			properties = buildSchema(
-				dethCounter,
+				depthCounter,
 				schemas,
 				properties,
 				propertyPath,
@@ -218,9 +259,9 @@ func buildSchema(
 
 		return properties
 	case *Schema:
-		dethCounter.Enter()
+		depthCounter.Enter()
 		return buildSchema(
-			dethCounter,
+			depthCounter,
 			schemas,
 			properties,
 			propertyPath,

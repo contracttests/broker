@@ -7,6 +7,7 @@ import (
 
 func Register(components *components.Components) {
 	repo := repository.NewContractRepository(components.Pool)
-	controller := NewUploadContractController(repo)
+	checker := NewCompatibilityChecker(repo)
+	controller := NewUploadContractController(repo, checker)
 	components.Server.Post("/contracts", controller.Handle)
 }

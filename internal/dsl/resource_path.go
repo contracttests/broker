@@ -10,10 +10,10 @@ import (
 
 var (
 	consumerRestRequestRegex = regexp.MustCompile(
-		`^consumes;(?P<provider>[^;]+);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
+		`^consumes;(?P<provider>[^;]*);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
 	)
 	consumerRestResponseRegex = regexp.MustCompile(
-		`^consumes;(?P<provider>[^;]+);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);responses;(?P<status>\d+)$`,
+		`^consumes;(?P<provider>[^;]*);rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);responses;(?P<status>\d+)$`,
 	)
 	providerRestRequestRegex = regexp.MustCompile(
 		`^provides;rest;(?P<endpoint>[^;]+);(?P<method>[^;]+);request$`,
@@ -77,19 +77,39 @@ func (rp *ResourcePath) ExtractNamedArgs(regex *regexp.Regexp) (map[string]strin
 
 func (rp *ResourcePath) ToResource(properties map[string]model.Property) model.Resource {
 	if args, ok := rp.ExtractNamedArgs(consumerRestRequestRegex); ok {
-		return model.NewConsumedRestRequest(args["provider"], args["endpoint"], args["method"], properties)
+		return model.NewConsumedRestRequest(
+			args["provider"],
+			args["endpoint"],
+			args["method"],
+			properties,
+		)
 	}
 
 	if args, ok := rp.ExtractNamedArgs(consumerRestResponseRegex); ok {
-		return model.NewConsumedRestResponse(args["provider"], args["endpoint"], args["method"], args["status"], properties)
+		return model.NewConsumedRestResponse(
+			args["provider"],
+			args["endpoint"],
+			args["method"],
+			args["status"],
+			properties,
+		)
 	}
 
 	if args, ok := rp.ExtractNamedArgs(providerRestRequestRegex); ok {
-		return model.NewProvidedRestRequest(args["endpoint"], args["method"], properties)
+		return model.NewProvidedRestRequest(
+			args["endpoint"],
+			args["method"],
+			properties,
+		)
 	}
 
 	if args, ok := rp.ExtractNamedArgs(providerRestResponseRegex); ok {
-		return model.NewProvidedRestResponse(args["endpoint"], args["method"], args["status"], properties)
+		return model.NewProvidedRestResponse(
+			args["endpoint"],
+			args["method"],
+			args["status"],
+			properties,
+		)
 	}
 
 	panic(fmt.Errorf("unrecognized resource path: %q", rp.String()))

@@ -60,8 +60,8 @@ func (c *Contract) Diff(next *Contract) ContractDiff {
 func addedResourceChange(r Resource) ResourceChange {
 	changes := make(map[string]PropertyChange, len(r.Properties))
 
-	for path, p := range r.Properties {
-		changes[path] = PropertyChange{Kind: ChangeAdded, After: p}
+	for path, property := range r.Properties {
+		changes[path] = PropertyChange{Kind: ChangeAdded, After: property}
 	}
 
 	return ResourceChange{Kind: ChangeAdded, Resource: r, Properties: changes}
@@ -70,8 +70,8 @@ func addedResourceChange(r Resource) ResourceChange {
 func removedResourceChange(r Resource) ResourceChange {
 	changes := make(map[string]PropertyChange, len(r.Properties))
 
-	for path, p := range r.Properties {
-		changes[path] = PropertyChange{Kind: ChangeRemoved, Before: p}
+	for path, property := range r.Properties {
+		changes[path] = PropertyChange{Kind: ChangeRemoved, Before: property}
 	}
 
 	return ResourceChange{Kind: ChangeRemoved, Resource: r, Properties: changes}

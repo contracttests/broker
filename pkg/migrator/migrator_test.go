@@ -93,8 +93,8 @@ func (s *MigratorSuite) tableExists(name string) bool {
 }
 
 func (s *MigratorSuite) TestAppliesAllPendingMigrations() {
-	s.writeMigration("0001_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
-	s.writeMigration("0002_create_bar.sql", "CREATE TABLE bar (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260101000000_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260102000000_create_bar.sql", "CREATE TABLE bar (id SERIAL PRIMARY KEY);")
 
 	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
 	if err := m.Migrate(); err != nil {
@@ -107,7 +107,7 @@ func (s *MigratorSuite) TestAppliesAllPendingMigrations() {
 }
 
 func (s *MigratorSuite) TestIsIdempotent() {
-	s.writeMigration("0001_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260101000000_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
 
 	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
 	s.NoError(m.Migrate())
@@ -117,13 +117,13 @@ func (s *MigratorSuite) TestIsIdempotent() {
 }
 
 func (s *MigratorSuite) TestPicksUpNewlyAddedMigrations() {
-	s.writeMigration("0001_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260101000000_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
 
 	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
 	s.NoError(m.Migrate())
 	s.Equal(1, s.countMigrations())
 
-	s.writeMigration("0002_create_bar.sql", "CREATE TABLE bar (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260102000000_create_bar.sql", "CREATE TABLE bar (id SERIAL PRIMARY KEY);")
 	s.NoError(m.Migrate())
 
 	s.Equal(2, s.countMigrations())
@@ -139,7 +139,7 @@ func (s *MigratorSuite) TestEnsuresMigrationsTable() {
 }
 
 func (s *MigratorSuite) TestSkipsNonSqlAndDirectories() {
-	s.writeMigration("0001_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260101000000_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
 	if err := os.WriteFile(filepath.Join(s.dir, "README.md"), []byte("ignore me"), 0644); err != nil {
 		s.T().Fatalf("Failed to write README: %v", err)
 	}
@@ -154,11 +154,40 @@ func (s *MigratorSuite) TestSkipsNonSqlAndDirectories() {
 }
 
 func (s *MigratorSuite) TestReturnsErrorOnInvalidSQL() {
-	s.writeMigration("0001_broken.sql", "THIS IS NOT VALID SQL;")
+	s.writeMigration("20260101000000_broken.sql", "THIS IS NOT VALID SQL;")
 
 	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
 	err := m.Migrate()
 
 	s.Error(err)
 	s.Equal(0, s.countMigrations())
+}
+
+func (s *MigratorSuite) TestRollsBackAllPendingWhenAnyMigrationFails() {
+	s.writeMigration("20260101000000_create_foo.sql", "CREATE TABLE foo (id SERIAL PRIMARY KEY);")
+	s.writeMigration("20260102000000_broken.sql", "THIS IS NOT VALID SQL;")
+
+	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
+	err := m.Migrate()
+
+	s.Error(err)
+	s.Equal(0, s.countMigrations())
+	s.False(s.tableExists("foo"))
+}
+
+func (s *MigratorSuite) TestPanicsOnInvalidFilenameFormat() {
+	s.writeMigration("0001_legacy_format.sql", "CREATE TABLE legacy (id SERIAL PRIMARY KEY);")
+
+	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
+	s.PanicsWithValue(
+		`migrator: invalid migration filename "0001_legacy_format.sql": expected format YYYYMMDDHHMMSS_subject.sql (e.g. 20260520143022_add_users_table.sql)`,
+		func() { _ = m.Migrate() },
+	)
+}
+
+func (s *MigratorSuite) TestPanicsOnInvalidTimestamp() {
+	s.writeMigration("20260230000000_bad_date.sql", "CREATE TABLE bad (id SERIAL PRIMARY KEY);")
+
+	m := migrator.New(s.pool, s.dir, "public.schema_migrations")
+	s.Panics(func() { _ = m.Migrate() })
 }
