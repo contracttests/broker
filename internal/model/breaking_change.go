@@ -13,8 +13,19 @@ const (
 	ReasonOptionalInConsumerRequiredInProvider BreakingReason = "optional_in_consumer_required_in_provider"
 )
 
+type UploaderRole string
+
+const (
+	UploaderProvider UploaderRole = "provider"
+	UploaderConsumer UploaderRole = "consumer"
+)
+
+type CounterpartInfo struct {
+	Role UploaderRole
+	Name string
+}
+
 type BrokenResource struct {
-	Direction  Direction
 	Kind       ResourceKind
 	Provider   string
 	Endpoint   string
@@ -24,7 +35,6 @@ type BrokenResource struct {
 
 func NewBrokenResource(resource Resource) BrokenResource {
 	return BrokenResource{
-		Direction:  resource.Direction,
 		Kind:       resource.Kind,
 		Provider:   resource.Provider,
 		Endpoint:   resource.Endpoint,
@@ -34,10 +44,11 @@ func NewBrokenResource(resource Resource) BrokenResource {
 }
 
 type BreakingChange struct {
-	ContractInfo ContractInfo
+	UploaderRole UploaderRole
+	Counterpart  *CounterpartInfo
 	Resource     BrokenResource
-	Property     string
 	Reason       BreakingReason
-	ExpectedType string
-	ActualType   string
+	Property     string
+	ProviderType string
+	ConsumerType string
 }

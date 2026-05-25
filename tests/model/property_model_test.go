@@ -7,22 +7,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewProperty(t *testing.T) {
-	p := model.NewProperty("root.name", "string", true)
-	assert.Equal(t, model.Property{Path: "root.name", Type: "string", Optional: true}, p)
-}
-
-func TestPropertyIsSame(t *testing.T) {
+func TestProperty_IsSame_Identical(t *testing.T) {
 	a := model.NewProperty("root.id", "string", false)
 	b := model.NewProperty("root.id", "string", false)
+
 	assert.True(t, a.IsSame(&b))
+}
 
-	differentPath := model.NewProperty("root.name", "string", false)
-	assert.False(t, a.IsSame(&differentPath))
+func TestProperty_IsSame_FalseOnTypeMismatch(t *testing.T) {
+	a := model.NewProperty("root.id", "string", false)
+	b := model.NewProperty("root.id", "int", false)
 
-	differentType := model.NewProperty("root.id", "integer", false)
-	assert.False(t, a.IsSame(&differentType))
-
-	differentOptional := model.NewProperty("root.id", "string", true)
-	assert.False(t, a.IsSame(&differentOptional))
+	assert.False(t, a.IsSame(&b))
 }

@@ -1,4 +1,4 @@
-package upload_contract
+package compatibility
 
 import (
 	"context"
@@ -59,7 +59,11 @@ func (c *CompatibilityChecker) checkConsumer(
 		return
 	}
 
-	for _, breakingChange := range model.Compare(consumer, provider) {
+	for _, breakingChange := range model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	}) {
 		report.Append(breakingChange)
 	}
 }
@@ -72,7 +76,11 @@ func (c *CompatibilityChecker) checkProvider(
 	consumers := c.repo.FindConsumersOfProvider(ctx, provider)
 
 	for _, consumer := range consumers {
-		for _, breakingChange := range model.Compare(consumer, provider) {
+		for _, breakingChange := range model.Compare(model.CompareInput{
+			Consumer:     consumer,
+			Provider:     provider,
+			UploaderRole: model.UploaderProvider,
+		}) {
 			report.Append(breakingChange)
 		}
 	}

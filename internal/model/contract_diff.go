@@ -24,11 +24,11 @@ type PropertyChange struct {
 	After  Property
 }
 
-func (c *Contract) Diff(next *Contract) ContractDiff {
+func (contract *Contract) Diff(next *Contract) ContractDiff {
 	var prev, upcoming map[string]Resource
 
-	if c != nil {
-		prev = c.Resources
+	if contract != nil {
+		prev = contract.Resources
 	}
 
 	if next != nil {

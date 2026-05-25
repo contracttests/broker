@@ -5,67 +5,61 @@ import (
 	"encoding/hex"
 	"sort"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
-type ContractInfo struct {
-	Name  string
-	Owner string
-}
-
 type Contract struct {
-	ID         int64
-	UUID       uuid.UUID
-	Name       string
-	Owner      string
-	RawPayload string
-	Resources  map[string]Resource
+	ID          int64
+	Version     int
+	RawContract string
+	Resources   map[string]Resource
+	Participant *Participant
 }
 
-func NewContract(name string, owner string, rawPayload string) *Contract {
+func NewContract(participant *Participant, rawContract string) *Contract {
 	return &Contract{
-		Name:       name,
-		Owner:      owner,
-		RawPayload: rawPayload,
+		Participant: participant,
+		RawContract: rawContract,
 	}
 }
 
-func (c *Contract) AddResource(r Resource) string {
-	if c.Resources == nil {
-		c.Resources = make(map[string]Resource)
-	}
-	r.ContractInfo = &ContractInfo{Name: c.Name, Owner: c.Owner}
-	key := r.PrimaryHash()
-	c.Resources[key] = r
-	return key
+func (contract *Contract) ParticipantID() int64 {
+	return contract.Participant.ID
 }
 
-func (r Resource) PrimaryHash() string {
-	if r.Direction == Provides {
-		return r.ProviderHash()
+func (contract *Contract) AddResource(resource *Resource) {
+	if contract.Resources == nil {
+		contract.Resources = make(map[string]Resource)
 	}
 
-	return r.ConsumerHash()
+	resource.AddParticipant(contract.Participant)
+
+	contract.Resources[resource.PrimaryHash()] = *resource
 }
 
-func (c *Contract) CanonicalKey() string {
-	resourceKeys := make([]string, 0, len(c.Resources))
+func (resouce Resource) PrimaryHash() string {
+	if resouce.Direction == Provides {
+		return resouce.ProviderHash()
+	}
 
-	for _, resource := range c.Resources {
+	return resouce.ConsumerHash()
+}
+
+func (contract *Contract) CanonicalKey() string {
+	resourceKeys := make([]string, 0, len(contract.Resources))
+
+	for _, resource := range contract.Resources {
 		resourceKeys = append(resourceKeys, resource.CanonicalKey())
 	}
 
 	sort.Strings(resourceKeys)
 
 	return strings.Join([]string{
-		c.Name,
-		c.Owner,
+		contract.Participant.Name,
 		strings.Join(resourceKeys, ";;"),
 	}, ";;")
 }
 
-func (c *Contract) Checksum() string {
-	sum := sha256.Sum256([]byte(c.CanonicalKey()))
+func (contract *Contract) Checksum() string {
+	sum := sha256.Sum256([]byte(contract.CanonicalKey()))
 	return hex.EncodeToString(sum[:])
 }

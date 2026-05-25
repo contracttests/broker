@@ -7,81 +7,93 @@ import (
 	"strings"
 )
 
-type Direction string
-
 const (
-	Consumes Direction = "consumes"
-	Provides Direction = "provides"
-)
-
-type ResourceKind string
-
-const (
+	Consumes     Direction    = "consumes"
+	Provides     Direction    = "provides"
 	RestRequest  ResourceKind = "rest_request"
 	RestResponse ResourceKind = "rest_response"
 )
 
+type Direction string
+
+func (direction *Direction) String() string {
+	return string(*direction)
+}
+
+type ResourceKind string
+
+func (resourceKind *ResourceKind) String() string {
+	return string(*resourceKind)
+}
+
 type Resource struct {
-	ID           int64
-	Direction    Direction
-	Kind         ResourceKind
-	Provider     string
-	Endpoint     string
-	Method       string
-	StatusCode   string
-	Properties   map[string]Property
-	ContractInfo *ContractInfo
+	ID          int64
+	Direction   Direction
+	Kind        ResourceKind
+	Provider    string
+	Endpoint    string
+	Method      string
+	StatusCode  string
+	Properties  map[string]Property
+	Participant *Participant
 }
 
-func (r Resource) ProviderHash() string {
-	providerName := r.Provider
-	if r.Direction == Provides {
-		providerName = r.ContractName()
+func (resouce *Resource) AddParticipant(participant *Participant) {
+	resouce.Participant = participant
+}
+
+func (resouce *Resource) ParticipantID() int64 {
+	return resouce.Participant.ID
+}
+
+func (resouce *Resource) ProviderHash() string {
+	providerName := resouce.Provider
+	if resouce.Direction == Provides {
+		providerName = resouce.ParticipantName()
 	}
 
-	parts := []string{providerName, r.Endpoint, r.Method}
-	if r.Kind == RestResponse {
-		parts = append(parts, r.StatusCode)
+	parts := []string{providerName, resouce.Endpoint, resouce.Method}
+	if resouce.Kind == RestResponse {
+		parts = append(parts, resouce.StatusCode)
 	}
 
 	return hashParts(parts)
 }
 
-func (r Resource) ConsumerHash() string {
-	if r.Direction != Consumes {
+func (resouce *Resource) ConsumerHash() string {
+	if resouce.Direction != Consumes {
 		return ""
 	}
-	parts := []string{r.ContractName(), r.Provider, r.Endpoint, r.Method}
-	if r.Kind == RestResponse {
-		parts = append(parts, r.StatusCode)
+
+	parts := []string{resouce.ParticipantName(), resouce.Provider, resouce.Endpoint, resouce.Method}
+	if resouce.Kind == RestResponse {
+		parts = append(parts, resouce.StatusCode)
 	}
+
 	return hashParts(parts)
 }
 
-func (r Resource) ContractName() string {
-	if r.ContractInfo == nil {
-		return ""
-	}
-
-	return r.ContractInfo.Name
+func (resouce *Resource) ParticipantName() string {
+	return resouce.Participant.Name
 }
 
-func (r Resource) CanonicalKey() string {
-	propertyKeys := make([]string, 0, len(r.Properties))
+func (resouce *Resource) CanonicalKey() string {
+	propertyKeys := make([]string, 0, len(resouce.Properties))
 
-	for _, property := range r.Properties {
+	for _, property := range resouce.Properties {
 		propertyKeys = append(propertyKeys, property.CanonicalKey())
 	}
 
 	sort.Strings(propertyKeys)
 
 	return strings.Join([]string{
-		string(r.Direction),
-		string(r.Kind),
-		r.Provider,
-		r.Endpoint,
-		r.Method,
-		r.StatusCode,
+		string(resouce.Direction),
+		string(resouce.Kind),
+		resouce.ParticipantName(),
+		resouce.Provider,
+		resouce.Endpoint,
+		resouce.Method,
+		resouce.StatusCode,
 		strings.Join(propertyKeys, ";;"),
 	}, ";;")
 }
@@ -94,8 +106,8 @@ func hashParts(parts []string) string {
 func NewConsumedRestRequest(
 	provider, endpoint, method string,
 	properties map[string]Property,
-) Resource {
-	return Resource{
+) *Resource {
+	return &Resource{
 		Direction:  Consumes,
 		Kind:       RestRequest,
 		Provider:   provider,
@@ -108,8 +120,8 @@ func NewConsumedRestRequest(
 func NewProvidedRestRequest(
 	endpoint, method string,
 	properties map[string]Property,
-) Resource {
-	return Resource{
+) *Resource {
+	return &Resource{
 		Direction:  Provides,
 		Kind:       RestRequest,
 		Endpoint:   endpoint,
@@ -121,8 +133,8 @@ func NewProvidedRestRequest(
 func NewConsumedRestResponse(
 	provider, endpoint, method, statusCode string,
 	properties map[string]Property,
-) Resource {
-	return Resource{
+) *Resource {
+	return &Resource{
 		Direction:  Consumes,
 		Kind:       RestResponse,
 		Provider:   provider,
@@ -136,8 +148,8 @@ func NewConsumedRestResponse(
 func NewProvidedRestResponse(
 	endpoint, method, statusCode string,
 	properties map[string]Property,
-) Resource {
-	return Resource{
+) *Resource {
+	return &Resource{
 		Direction:  Provides,
 		Kind:       RestResponse,
 		Endpoint:   endpoint,

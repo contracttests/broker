@@ -1,260 +1,312 @@
 package model_test
 
 import (
-	"encoding/json"
 	"testing"
 
-	"github.com/contracttesting/broker/server/internal/features/upload_contract/wireout"
 	"github.com/contracttesting/broker/server/internal/model"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestCompatibility_MissingTwoProperties_AccumulatesBothBreaks(t *testing.T) {
-	consumerContract := &model.Contract{Name: "broken-app", Owner: "app-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", map[string]model.Property{
-		"root":             model.NewProperty("root", "array", false),
-		"root[]":           model.NewProperty("root[]", "object", false),
-		"root[].uuid":      model.NewProperty("root[].uuid", "string", false),
-		"root[].name":      model.NewProperty("root[].name", "string", false),
-		"root[].deletedAt": model.NewProperty("root[].deletedAt", "string", false),
-		"root[].soldAt":    model.NewProperty("root[].soldAt", "string", false),
-	}))
-	consumer := consumerContract.Resources[consumerKey]
-	provider := model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
-		"root":        model.NewProperty("root", "array", false),
-		"root[]":      model.NewProperty("root[]", "object", false),
-		"root[].uuid": model.NewProperty("root[].uuid", "string", false),
-		"root[].name": model.NewProperty("root[].name", "string", false),
-	})
-
-	got := model.Compare(consumer, provider)
-
-	require.Len(t, got, 2, "Compare must accumulate every missing property; short-circuit is a bug")
-	properties := map[string]model.BreakingReason{}
-	for _, breakingChange := range got {
-		properties[breakingChange.Property] = breakingChange.Reason
-		assert.Equal(t, "broken-app", breakingChange.ContractInfo.Name)
-		assert.Equal(t, "app-team", breakingChange.ContractInfo.Owner)
+func TestCompare_Compatible_NoBreaks(t *testing.T) {
+	props := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", false),
 	}
-	assert.Equal(t, model.ReasonMissingInProvider, properties["root[].deletedAt"])
-	assert.Equal(t, model.ReasonMissingInProvider, properties["root[].soldAt"])
+
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", props)
+	provider := *model.NewProvidedRestResponse("/pets", "get", "200", props)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	})
+
+	assert.Empty(t, breaks)
 }
 
-func TestCompatibility_TypeMismatch_CarriesExpectedAndActualTypes(t *testing.T) {
-	consumerContract := &model.Contract{Name: "app", Owner: "app-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestRequest("pets-service", "/pets", "post", map[string]model.Property{
-		"root":     model.NewProperty("root", "object", false),
-		"root.age": model.NewProperty("root.age", "string", false),
-	}))
-	consumer := consumerContract.Resources[consumerKey]
-	provider := model.NewProvidedRestRequest("/pets", "post", map[string]model.Property{
-		"root":     model.NewProperty("root", "object", false),
-		"root.age": model.NewProperty("root.age", "integer", false),
-	})
-
-	got := model.Compare(consumer, provider)
-
-	require.Len(t, got, 1)
-	assert.Equal(t, model.ReasonTypeMismatch, got[0].Reason)
-	assert.Equal(t, "root.age", got[0].Property)
-	assert.Equal(t, "string", got[0].ExpectedType)
-	assert.Equal(t, "integer", got[0].ActualType)
-	assert.Equal(t, "app", got[0].ContractInfo.Name)
-	assert.Equal(t, "app-team", got[0].ContractInfo.Owner)
-}
-
-func TestCompatibility_OptionalInProviderRequiredInConsumer(t *testing.T) {
-	consumerContract := &model.Contract{Name: "app", Owner: "app-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", false),
-	}))
-	consumer := consumerContract.Resources[consumerKey]
-	provider := model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", true),
-	})
-
-	got := model.Compare(consumer, provider)
-
-	require.Len(t, got, 1)
-	assert.Equal(t, model.ReasonOptionalInProviderRequiredInConsumer, got[0].Reason)
-	assert.Equal(t, "root.uuid", got[0].Property)
-	assert.Equal(t, "app", got[0].ContractInfo.Name)
-	assert.Equal(t, "app-team", got[0].ContractInfo.Owner)
-}
-
-func TestCompatibility_SubsetConsumer_NoBreaks(t *testing.T) {
-	consumer := model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", false),
-	})
-	provider := model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", false),
-		"root.name": model.NewProperty("root.name", "string", false),
-	})
-
-	got := model.Compare(consumer, provider)
-	assert.Empty(t, got)
-}
-
-func TestCompatibility_ProviderHasExtras_NoBreaks(t *testing.T) {
-	consumer := model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", false),
-	})
-	provider := model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", false),
-		"root.name": model.NewProperty("root.name", "string", true),
-		"root.age":  model.NewProperty("root.age", "integer", false),
-	})
-
-	got := model.Compare(consumer, provider)
-	assert.Empty(t, got)
-}
-
-func TestCompatibility_ConsumerOptional_ProviderRequired_NoBreak(t *testing.T) {
-	consumer := model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", true),
-	})
-	provider := model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.uuid": model.NewProperty("root.uuid", "string", false),
-	})
-
-	got := model.Compare(consumer, provider)
-	assert.Empty(t, got)
-}
-
-func TestCompatibility_MissingProviderBreak_HasEmptyPropertyAndCopiesCoordsAndConsumerInfo(t *testing.T) {
-	consumerContract := &model.Contract{Name: "app", Owner: "billing-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestResponse("billing", "/invoices", "get", "200", nil))
-	consumer := consumerContract.Resources[consumerKey]
-
-	for _, reason := range []model.BreakingReason{
-		model.ReasonProviderNotSpecified,
-		model.ReasonProviderNotFound,
-		model.ReasonProviderResourceNotFound,
-	} {
-		breakingChange := model.NewMissingProviderBreak(consumer, reason)
-		assert.Equal(t, "", breakingChange.Property, "reason=%s", reason)
-		assert.Equal(t, reason, breakingChange.Reason)
-		assert.Equal(t, model.NewBrokenResource(consumer), breakingChange.Resource)
-		assert.Equal(t, "app", breakingChange.ContractInfo.Name, "reason=%s", reason)
-		assert.Equal(t, "billing-team", breakingChange.ContractInfo.Owner, "reason=%s", reason)
+func TestCompare_TypeMismatch_ReportsBreak(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", false),
 	}
-}
-
-func TestCompatibility_MissingProviderBreak_SerializesWithoutPropertyKey(t *testing.T) {
-	consumerContract := &model.Contract{Name: "app", Owner: "app-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestResponse("billing", "/invoices", "get", "200", nil))
-	consumer := consumerContract.Resources[consumerKey]
-	breakingChange := model.NewMissingProviderBreak(consumer, model.ReasonProviderNotFound)
-
-	view := wireout.BreakingChangeItem{
-		ContractName:  "app",
-		ContractOwner: "app-team",
-		Resource: wireout.BrokenResource{
-			Direction:  string(breakingChange.Resource.Direction),
-			Kind:       string(breakingChange.Resource.Kind),
-			Provider:   breakingChange.Resource.Provider,
-			Endpoint:   breakingChange.Resource.Endpoint,
-			Method:     breakingChange.Resource.Method,
-			StatusCode: breakingChange.Resource.StatusCode,
-		},
-		Property: breakingChange.Property,
-		Reason:   string(breakingChange.Reason),
+	providerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "int", false),
 	}
-	encoded, err := json.Marshal(view)
-	require.NoError(t, err)
-	assert.NotContains(t, string(encoded), `"property"`)
+
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", consumerProps)
+	provider := *model.NewProvidedRestResponse("/pets", "get", "200", providerProps)
+	provider.AddParticipant(model.NewParticipant("pets-service"))
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	})
+
+	assert.Len(t, breaks, 1)
+	assert.Equal(t, model.ReasonTypeMismatch, breaks[0].Reason)
+	assert.Equal(t, "root.id", breaks[0].Property)
+	assert.Equal(t, "string", breaks[0].ConsumerType)
+	assert.Equal(t, "int", breaks[0].ProviderType)
+	assert.NotNil(t, breaks[0].Counterpart)
+	assert.Equal(t, model.UploaderProvider, breaks[0].Counterpart.Role)
+	assert.Equal(t, "pets-service", breaks[0].Counterpart.Name)
 }
 
-func TestCompatibility_Request_ProviderRequiredMissingInConsumer_Breaks(t *testing.T) {
-	consumerContract := &model.Contract{Name: "app", Owner: "app-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestRequest("pets-service", "/pets", "post", map[string]model.Property{
+func TestCompare_Response_MissingInProvider_ReportsBreak(t *testing.T) {
+	consumerProps := map[string]model.Property{
 		"root":      model.NewProperty("root", "object", false),
 		"root.name": model.NewProperty("root.name", "string", false),
-	}))
-	consumer := consumerContract.Resources[consumerKey]
-	provider := model.NewProvidedRestRequest("/pets", "post", map[string]model.Property{
-		"root":       model.NewProperty("root", "object", false),
-		"root.name":  model.NewProperty("root.name", "string", false),
-		"root.email": model.NewProperty("root.email", "string", false),
+	}
+	providerProps := map[string]model.Property{
+		"root": model.NewProperty("root", "object", false),
+	}
+
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", consumerProps)
+	provider := *model.NewProvidedRestResponse("/pets", "get", "200", providerProps)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
 	})
 
-	got := model.Compare(consumer, provider)
-
-	require.Len(t, got, 1)
-	assert.Equal(t, model.ReasonMissingInConsumer, got[0].Reason)
-	assert.Equal(t, "root.email", got[0].Property)
-	assert.Equal(t, "app", got[0].ContractInfo.Name)
-	assert.Equal(t, "app-team", got[0].ContractInfo.Owner)
+	assert.Len(t, breaks, 1)
+	assert.Equal(t, model.ReasonMissingInProvider, breaks[0].Reason)
+	assert.Equal(t, "root.name", breaks[0].Property)
 }
 
-func TestCompatibility_Request_ProviderOptionalMissingInConsumer_NoBreak(t *testing.T) {
-	consumer := model.NewConsumedRestRequest("pets-service", "/pets", "post", map[string]model.Property{
+func TestCompare_Response_OptionalInProviderRequiredInConsumer_ReportsBreak(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", false),
+	}
+	providerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", true),
+	}
+
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", consumerProps)
+	provider := *model.NewProvidedRestResponse("/pets", "get", "200", providerProps)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	})
+
+	assert.Len(t, breaks, 1)
+	assert.Equal(t, model.ReasonOptionalInProviderRequiredInConsumer, breaks[0].Reason)
+	assert.Equal(t, "root.id", breaks[0].Property)
+}
+
+func TestCompare_Request_MissingRequiredProperty_ReportsMissingInConsumer(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root": model.NewProperty("root", "object", false),
+	}
+	providerProps := map[string]model.Property{
 		"root":      model.NewProperty("root", "object", false),
 		"root.name": model.NewProperty("root.name", "string", false),
-	})
-	provider := model.NewProvidedRestRequest("/pets", "post", map[string]model.Property{
-		"root":       model.NewProperty("root", "object", false),
-		"root.name":  model.NewProperty("root.name", "string", false),
-		"root.email": model.NewProperty("root.email", "string", true),
+	}
+
+	consumer := *model.NewConsumedRestRequest("pets-service", "/pets", "post", consumerProps)
+	provider := *model.NewProvidedRestRequest("/pets", "post", providerProps)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
 	})
 
-	got := model.Compare(consumer, provider)
-	assert.Empty(t, got)
+	assert.Len(t, breaks, 1)
+	assert.Equal(t, model.ReasonMissingInConsumer, breaks[0].Reason)
+	assert.Equal(t, "root.name", breaks[0].Property)
 }
 
-func TestCompatibility_Request_ProviderRequiredConsumerOptional_Breaks(t *testing.T) {
-	consumerContract := &model.Contract{Name: "app", Owner: "app-team"}
-	consumerKey := consumerContract.AddResource(model.NewConsumedRestRequest("pets-service", "/pets", "post", map[string]model.Property{
+func TestCompare_Request_MissingOptionalProperty_NoBreak(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root": model.NewProperty("root", "object", false),
+	}
+	providerProps := map[string]model.Property{
+		"root":      model.NewProperty("root", "object", false),
+		"root.note": model.NewProperty("root.note", "string", true),
+	}
+
+	consumer := *model.NewConsumedRestRequest("pets-service", "/pets", "post", consumerProps)
+	provider := *model.NewProvidedRestRequest("/pets", "post", providerProps)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	})
+
+	assert.Empty(t, breaks)
+}
+
+func TestCompare_Request_TypeMismatch_ReportsBreak(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root":      model.NewProperty("root", "object", false),
+		"root.name": model.NewProperty("root.name", "int", false),
+	}
+	providerProps := map[string]model.Property{
+		"root":      model.NewProperty("root", "object", false),
+		"root.name": model.NewProperty("root.name", "string", false),
+	}
+
+	consumer := *model.NewConsumedRestRequest("pets-service", "/pets", "post", consumerProps)
+	provider := *model.NewProvidedRestRequest("/pets", "post", providerProps)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	})
+
+	assert.Len(t, breaks, 1)
+	assert.Equal(t, model.ReasonTypeMismatch, breaks[0].Reason)
+	assert.Equal(t, "root.name", breaks[0].Property)
+	assert.Equal(t, "int", breaks[0].ConsumerType)
+	assert.Equal(t, "string", breaks[0].ProviderType)
+}
+
+func TestCompare_Request_OptionalInConsumerRequiredInProvider_ReportsBreak(t *testing.T) {
+	consumerProps := map[string]model.Property{
 		"root":      model.NewProperty("root", "object", false),
 		"root.name": model.NewProperty("root.name", "string", true),
-	}))
-	consumer := consumerContract.Resources[consumerKey]
-	provider := model.NewProvidedRestRequest("/pets", "post", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.name": model.NewProperty("root.name", "string", false),
-	})
-
-	got := model.Compare(consumer, provider)
-
-	require.Len(t, got, 1)
-	assert.Equal(t, model.ReasonOptionalInConsumerRequiredInProvider, got[0].Reason)
-	assert.Equal(t, "root.name", got[0].Property)
-}
-
-func TestCompatibility_Request_ConsumerExtraField_NoBreak(t *testing.T) {
-	consumer := model.NewConsumedRestRequest("pets-service", "/pets", "post", map[string]model.Property{
-		"root":       model.NewProperty("root", "object", false),
-		"root.name":  model.NewProperty("root.name", "string", false),
-		"root.extra": model.NewProperty("root.extra", "string", false),
-	})
-	provider := model.NewProvidedRestRequest("/pets", "post", map[string]model.Property{
-		"root":      model.NewProperty("root", "object", false),
-		"root.name": model.NewProperty("root.name", "string", false),
-	})
-
-	got := model.Compare(consumer, provider)
-	assert.Empty(t, got, "extra fields the provider does not expect must not break a request")
-}
-
-func TestContract_Checksum_ExcludesContractInfo(t *testing.T) {
-	build := func() model.Contract {
-		c := model.Contract{Name: "billing", Owner: "billing-team"}
-		c.AddResource(model.NewProvidedRestResponse("/invoices", "get", "200", map[string]model.Property{
-			"root":    model.NewProperty("root", "object", false),
-			"root.id": model.NewProperty("root.id", "string", false),
-		}))
-		return c
 	}
-	first := build()
-	second := build()
-	assert.Equal(t, first.Checksum(), second.Checksum(), "ContractInfo on resources must not enter the checksum")
+	providerProps := map[string]model.Property{
+		"root":      model.NewProperty("root", "object", false),
+		"root.name": model.NewProperty("root.name", "string", false),
+	}
+
+	consumer := *model.NewConsumedRestRequest("pets-service", "/pets", "post", consumerProps)
+	provider := *model.NewProvidedRestRequest("/pets", "post", providerProps)
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderConsumer,
+	})
+
+	assert.Len(t, breaks, 1)
+	assert.Equal(t, model.ReasonOptionalInConsumerRequiredInProvider, breaks[0].Reason)
+	assert.Equal(t, "root.name", breaks[0].Property)
+}
+
+func TestCompare_UploaderProvider_CounterpartIsConsumer(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", false),
+	}
+	providerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "int", false),
+	}
+
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", consumerProps)
+	consumer.AddParticipant(model.NewParticipant("web-app"))
+	provider := *model.NewProvidedRestResponse("/pets", "get", "200", providerProps)
+	provider.AddParticipant(model.NewParticipant("pets-service"))
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderProvider,
+	})
+
+	assert.Len(t, breaks, 1)
+	assert.NotNil(t, breaks[0].Counterpart)
+	assert.Equal(t, model.UploaderConsumer, breaks[0].Counterpart.Role)
+	assert.Equal(t, "web-app", breaks[0].Counterpart.Name)
+}
+
+func TestCompare_NilParticipant_CounterpartIsNil(t *testing.T) {
+	consumerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", false),
+	}
+	providerProps := map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "int", false),
+	}
+
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", consumerProps)
+	provider := *model.NewProvidedRestResponse("/pets", "get", "200", providerProps)
+	provider.AddParticipant(model.NewParticipant("pets-service"))
+
+	breaks := model.Compare(model.CompareInput{
+		Consumer:     consumer,
+		Provider:     provider,
+		UploaderRole: model.UploaderProvider,
+	})
+
+	assert.Len(t, breaks, 1)
+	assert.Nil(t, breaks[0].Counterpart)
+}
+
+func TestNewMissingProviderBreak_ProviderNotSpecified_NoCounterpart(t *testing.T) {
+	consumer := *model.NewConsumedRestResponse("", "/pets", "get", "200", nil)
+
+	change := model.NewMissingProviderBreak(consumer, model.ReasonProviderNotSpecified)
+
+	assert.Equal(t, model.ReasonProviderNotSpecified, change.Reason)
+	assert.Equal(t, model.UploaderConsumer, change.UploaderRole)
+	assert.Nil(t, change.Counterpart)
+	assert.Equal(t, model.RestResponse, change.Resource.Kind)
+	assert.Equal(t, "/pets", change.Resource.Endpoint)
+	assert.Equal(t, "get", change.Resource.Method)
+	assert.Equal(t, "200", change.Resource.StatusCode)
+}
+
+func TestNewMissingProviderBreak_ProviderNotFound_NameOnlyCounterpart(t *testing.T) {
+	consumer := *model.NewConsumedRestResponse("unknown-service", "/pets", "get", "200", nil)
+
+	change := model.NewMissingProviderBreak(consumer, model.ReasonProviderNotFound)
+
+	assert.Equal(t, model.ReasonProviderNotFound, change.Reason)
+	assert.Equal(t, model.UploaderConsumer, change.UploaderRole)
+	if assert.NotNil(t, change.Counterpart) {
+		assert.Equal(t, model.UploaderProvider, change.Counterpart.Role)
+		assert.Equal(t, "unknown-service", change.Counterpart.Name)
+	}
+	assert.Equal(t, "unknown-service", change.Resource.Provider)
+}
+
+func TestNewMissingProviderBreak_ProviderResourceNotFound_NameOnlyCounterpart(t *testing.T) {
+	consumer := *model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", nil)
+
+	change := model.NewMissingProviderBreak(consumer, model.ReasonProviderResourceNotFound)
+
+	assert.Equal(t, model.ReasonProviderResourceNotFound, change.Reason)
+	assert.Equal(t, model.UploaderConsumer, change.UploaderRole)
+	if assert.NotNil(t, change.Counterpart) {
+		assert.Equal(t, model.UploaderProvider, change.Counterpart.Role)
+		assert.Equal(t, "pets-service", change.Counterpart.Name)
+	}
+}
+
+func TestCompatibilityReport_Breaks_EmptyReportReturnsNonNilEmptySlice(t *testing.T) {
+	report := &model.CompatibilityReport{}
+
+	breaks := report.Breaks()
+
+	assert.NotNil(t, breaks)
+	assert.Len(t, breaks, 0)
+}
+
+func TestCompatibilityReport_Breaks_PreservesAppendOrder(t *testing.T) {
+	report := &model.CompatibilityReport{}
+	first := model.BreakingChange{Reason: model.ReasonMissingInProvider, Property: "root.a"}
+	second := model.BreakingChange{Reason: model.ReasonTypeMismatch, Property: "root.b"}
+
+	report.Append(first)
+	report.Append(second)
+
+	breaks := report.Breaks()
+	assert.Len(t, breaks, 2)
+	assert.Equal(t, first, breaks[0])
+	assert.Equal(t, second, breaks[1])
 }

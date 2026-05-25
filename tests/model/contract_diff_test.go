@@ -7,216 +7,151 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDiff_ResourceAdded(t *testing.T) {
-	prev := model.Contract{Name: "c", Owner: "app"}
+func TestDiff_NoChanges_BetweenEquivalentContracts(t *testing.T) {
+	prev := newContractWithOnePetsResource("pets-service")
+	next := newContractWithOnePetsResource("pets-service")
 
-	added := model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root":      {Path: "root", Type: "object"},
-			"root.name": {Path: "root.name", Type: "string"},
-		},
+	diff := prev.Diff(next)
+
+	assert.Empty(t, diff.Resources)
+}
+
+func TestDiff_ReportsAddedResource(t *testing.T) {
+	prev := newContractWithOnePetsResource("pets-service")
+
+	next := newContractWithOnePetsResource("pets-service")
+	added := model.NewProvidedRestResponse("/pets/{id}", "get", "200", map[string]model.Property{
+		"root": model.NewProperty("root", "object", false),
+	})
+	next.AddResource(added)
+
+	diff := prev.Diff(next)
+
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeAdded, change.Kind)
+		assert.Equal(t, "/pets/{id}", change.Resource.Endpoint)
 	}
-	next := model.Contract{Name: "c", Owner: "app"}
-	key := next.AddResource(added)
+}
 
-	diff := prev.Diff(&next)
+func TestDiff_BothNil_ReturnsEmpty(t *testing.T) {
+	var prev, next *model.Contract
 
-	got, ok := diff.Resources[key]
-	if assert.True(t, ok) {
-		assert.Equal(t, model.ChangeAdded, got.Kind)
-		assert.Len(t, got.Properties, 2)
-		for _, p := range got.Properties {
-			assert.Equal(t, model.ChangeAdded, p.Kind)
+	diff := prev.Diff(next)
+
+	assert.Empty(t, diff.Resources)
+}
+
+func TestDiff_PrevNil_AllResourcesAdded(t *testing.T) {
+	next := newContractWithOnePetsResource("pets-service")
+
+	diff := (*model.Contract)(nil).Diff(next)
+
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeAdded, change.Kind)
+	}
+}
+
+func TestDiff_NextNil_AllResourcesRemoved(t *testing.T) {
+	prev := newContractWithOnePetsResource("pets-service")
+
+	diff := prev.Diff(nil)
+
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeRemoved, change.Kind)
+	}
+}
+
+func TestDiff_RemovedResource(t *testing.T) {
+	prev := newContractWithOnePetsResource("pets-service")
+	extra := model.NewProvidedRestResponse("/pets/{id}", "get", "200", map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "string", false),
+	})
+	prev.AddResource(extra)
+
+	next := newContractWithOnePetsResource("pets-service")
+
+	diff := prev.Diff(next)
+
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeRemoved, change.Kind)
+		assert.Equal(t, "/pets/{id}", change.Resource.Endpoint)
+		assert.Len(t, change.Properties, 2)
+		for _, propChange := range change.Properties {
+			assert.Equal(t, model.ChangeRemoved, propChange.Kind)
 		}
 	}
 }
 
-func TestDiff_ResourceRemoved(t *testing.T) {
-	removed := model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root":      {Path: "root", Type: "object"},
-			"root.name": {Path: "root.name", Type: "string"},
-		},
-	}
-	prev := model.Contract{Name: "c", Owner: "app"}
-	key := prev.AddResource(removed)
+func TestDiff_ModifiedResource_PropertyAdded(t *testing.T) {
+	prev := newContractWithOnePetsResource("pets-service")
 
-	next := model.Contract{Name: "c", Owner: "app"}
+	next := model.NewContract(model.NewParticipant("pets-service"), "raw")
+	next.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
+		"root":      model.NewProperty("root", "object", false),
+		"root.id":   model.NewProperty("root.id", "string", false),
+		"root.name": model.NewProperty("root.name", "string", false),
+	}))
 
-	diff := prev.Diff(&next)
+	diff := prev.Diff(next)
 
-	got, ok := diff.Resources[key]
-	if assert.True(t, ok) {
-		assert.Equal(t, model.ChangeRemoved, got.Kind)
-		assert.Len(t, got.Properties, 2)
-		for _, p := range got.Properties {
-			assert.Equal(t, model.ChangeRemoved, p.Kind)
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeModified, change.Kind)
+		added, ok := change.Properties["root.name"]
+		if assert.True(t, ok, "expected root.name in property changes") {
+			assert.Equal(t, model.ChangeAdded, added.Kind)
+			assert.Equal(t, "root.name", added.After.Path)
 		}
 	}
 }
 
-func TestDiff_ResourceChanged(t *testing.T) {
-	prev := model.Contract{Name: "c", Owner: "app"}
-	prev.AddResource(model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root":    {Path: "root", Type: "object"},
-			"root.id": {Path: "root.id", Type: "string"},
-		},
-	})
+func TestDiff_ModifiedResource_PropertyRemoved(t *testing.T) {
+	prev := model.NewContract(model.NewParticipant("pets-service"), "raw")
+	prev.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
+		"root":      model.NewProperty("root", "object", false),
+		"root.id":   model.NewProperty("root.id", "string", false),
+		"root.name": model.NewProperty("root.name", "string", false),
+	}))
 
-	changed := model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root":    {Path: "root", Type: "object"},
-			"root.id": {Path: "root.id", Type: "integer"},
-		},
-	}
-	next := model.Contract{Name: "c", Owner: "app"}
-	key := next.AddResource(changed)
+	next := newContractWithOnePetsResource("pets-service")
 
-	diff := prev.Diff(&next)
+	diff := prev.Diff(next)
 
-	got, ok := diff.Resources[key]
-	if assert.True(t, ok) {
-		assert.Equal(t, model.ChangeModified, got.Kind)
-	}
-}
-
-func TestDiff_PropertyAdded(t *testing.T) {
-	prev := model.Contract{Name: "c", Owner: "app"}
-	prev.AddResource(model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root": {Path: "root", Type: "object"},
-		},
-	})
-
-	updated := model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root":      {Path: "root", Type: "object"},
-			"root.tags": {Path: "root.tags", Type: "array"},
-		},
-	}
-	next := model.Contract{Name: "c", Owner: "app"}
-	key := next.AddResource(updated)
-
-	diff := prev.Diff(&next)
-
-	got, ok := diff.Resources[key]
-	if assert.True(t, ok) {
-		assert.Equal(t, model.ChangeModified, got.Kind)
-		if assert.Len(t, got.Properties, 1) {
-			p := got.Properties["root.tags"]
-			assert.Equal(t, model.ChangeAdded, p.Kind)
-			assert.Equal(t, "array", p.After.Type)
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeModified, change.Kind)
+		removed, ok := change.Properties["root.name"]
+		if assert.True(t, ok, "expected root.name in property changes") {
+			assert.Equal(t, model.ChangeRemoved, removed.Kind)
+			assert.Equal(t, "root.name", removed.Before.Path)
 		}
 	}
 }
 
-func TestDiff_PropertyRemoved(t *testing.T) {
-	prev := model.Contract{Name: "c", Owner: "app"}
-	prev.AddResource(model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root":      {Path: "root", Type: "object"},
-			"root.tags": {Path: "root.tags", Type: "array"},
-		},
-	})
+func TestDiff_ModifiedResource_PropertyTypeChanged(t *testing.T) {
+	prev := newContractWithOnePetsResource("pets-service")
 
-	updated := model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root": {Path: "root", Type: "object"},
-		},
-	}
-	next := model.Contract{Name: "c", Owner: "app"}
-	key := next.AddResource(updated)
+	next := model.NewContract(model.NewParticipant("pets-service"), "raw")
+	next.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
+		"root":    model.NewProperty("root", "object", false),
+		"root.id": model.NewProperty("root.id", "int", false),
+	}))
 
-	diff := prev.Diff(&next)
+	diff := prev.Diff(next)
 
-	got, ok := diff.Resources[key]
-	if assert.True(t, ok) {
-		assert.Equal(t, model.ChangeModified, got.Kind)
-		if assert.Len(t, got.Properties, 1) {
-			p := got.Properties["root.tags"]
-			assert.Equal(t, model.ChangeRemoved, p.Kind)
-			assert.Equal(t, "array", p.Before.Type)
-		}
-	}
-}
-
-func TestDiff_PropertyChanged(t *testing.T) {
-	prev := model.Contract{Name: "c", Owner: "app"}
-	prev.AddResource(model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root.id": {Path: "root.id", Type: "string"},
-		},
-	})
-
-	updated := model.Resource{
-		Direction:  model.Provides,
-		Kind:       model.RestResponse,
-		Endpoint:   "/items",
-		Method:     "get",
-		StatusCode: "200",
-		Properties: map[string]model.Property{
-			"root.id": {Path: "root.id", Type: "integer"},
-		},
-	}
-	next := model.Contract{Name: "c", Owner: "app"}
-	key := next.AddResource(updated)
-
-	diff := prev.Diff(&next)
-
-	got, ok := diff.Resources[key]
-	if assert.True(t, ok) {
-		assert.Equal(t, model.ChangeModified, got.Kind)
-		if assert.Len(t, got.Properties, 1) {
-			p := got.Properties["root.id"]
-			assert.Equal(t, model.ChangeModified, p.Kind)
-			assert.Equal(t, "string", p.Before.Type)
-			assert.Equal(t, "integer", p.After.Type)
+	assert.Len(t, diff.Resources, 1)
+	for _, change := range diff.Resources {
+		assert.Equal(t, model.ChangeModified, change.Kind)
+		modified, ok := change.Properties["root.id"]
+		if assert.True(t, ok, "expected root.id in property changes") {
+			assert.Equal(t, model.ChangeModified, modified.Kind)
+			assert.Equal(t, "string", modified.Before.Type)
+			assert.Equal(t, "int", modified.After.Type)
 		}
 	}
 }

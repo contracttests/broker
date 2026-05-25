@@ -8,26 +8,17 @@ import (
 )
 
 type Contract struct {
-	Name             string              `json:"name,omitzero"`
-	Owner            string              `json:"owner"`
 	Provides         Provides            `json:"provides,omitzero"`
 	ConsumesServices ConsumesServicesMap `json:"consumes,omitzero"`
 	Schemas          SchemasMap          `json:"schemas,omitzero"`
 }
 
-func (c *Contract) ToContractModel() model.Contract {
-	contract := model.Contract{
-		Name:  c.Name,
-		Owner: c.Owner,
-	}
-
-	c.buildResources(&contract, NewResourcePath(""), *c)
-
-	return contract
+func (c *Contract) HydrateContract(contract *model.Contract) {
+	c.hydrateResources(contract, NewResourcePath(""), *c)
 }
 
-func (c *Contract) buildResources(
-	contractModel *model.Contract,
+func (c *Contract) hydrateResources(
+	contract *model.Contract,
 	resourcePath ResourcePath,
 	unknown any,
 ) {
@@ -37,36 +28,36 @@ func (c *Contract) buildResources(
 
 		for serviceName, consumes := range dsl.ConsumesServices {
 			consumerResourcePath := resourcePath.Append("consumes", serviceName)
-			c.buildResources(
-				contractModel,
+			c.hydrateResources(
+				contract,
 				consumerResourcePath,
 				consumes,
 			)
 		}
 
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath.Append("provides"),
 			dsl.Provides,
 		)
 
 	case Consumes:
 		consumes := unknown
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath,
 			consumes.Rest,
 		)
 
 	case Provides:
 		provides := unknown
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath,
 			provides.Rest,
 		)
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath,
 			provides.Message,
 		)
@@ -75,32 +66,32 @@ func (c *Contract) buildResources(
 		rest := unknown
 		for endpoint, methods := range rest {
 			if methods.Get.IsNonZero() {
-				c.buildResources(
-					contractModel,
+				c.hydrateResources(
+					contract,
 					resourcePath.Append("rest", endpoint),
 					methods.Get,
 				)
 			}
 
 			if methods.Post.IsNonZero() {
-				c.buildResources(
-					contractModel,
+				c.hydrateResources(
+					contract,
 					resourcePath.Append("rest", endpoint),
 					methods.Post,
 				)
 			}
 
 			if methods.Put.IsNonZero() {
-				c.buildResources(
-					contractModel,
+				c.hydrateResources(
+					contract,
 					resourcePath.Append("rest", endpoint),
 					methods.Put,
 				)
 			}
 
 			if methods.Delete.IsNonZero() {
-				c.buildResources(
-					contractModel,
+				c.hydrateResources(
+					contract,
 					resourcePath.Append("rest", endpoint),
 					methods.Delete,
 				)
@@ -109,8 +100,8 @@ func (c *Contract) buildResources(
 
 	case GetMethod:
 		getMethod := unknown
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath.Append("get", "responses"),
 			getMethod.Responses,
 		)
@@ -128,11 +119,11 @@ func (c *Contract) buildResources(
 				c.Schemas[postMethod.RequestBody],
 			)
 
-			contractModel.AddResource(requestResourcePath.ToResource(properties))
+			contract.AddResource(requestResourcePath.ToResource(properties))
 		}
 
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath.Append("post", "responses"),
 			postMethod.Responses,
 		)
@@ -150,11 +141,11 @@ func (c *Contract) buildResources(
 				c.Schemas[putMethod.RequestBody],
 			)
 
-			contractModel.AddResource(requestResourcePath.ToResource(properties))
+			contract.AddResource(requestResourcePath.ToResource(properties))
 		}
 
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			resourcePath.Append("put", "responses"),
 			putMethod.Responses,
 		)
@@ -162,8 +153,8 @@ func (c *Contract) buildResources(
 	case DeleteMethod:
 		deleteMethod := unknown
 		path := resourcePath.Append("delete", "responses")
-		c.buildResources(
-			contractModel,
+		c.hydrateResources(
+			contract,
 			path,
 			deleteMethod.Responses,
 		)
@@ -180,7 +171,7 @@ func (c *Contract) buildResources(
 				c.Schemas[schemaName],
 			)
 
-			contractModel.AddResource(responseResourcePath.ToResource(properties))
+			contract.AddResource(responseResourcePath.ToResource(properties))
 		}
 	}
 }

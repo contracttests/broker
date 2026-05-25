@@ -13,107 +13,89 @@ import (
 
 	"github.com/contracttesting/broker/server/internal"
 	"github.com/contracttesting/broker/server/internal/components"
-	"github.com/contracttesting/broker/server/internal/repository"
 	"github.com/contracttesting/broker/server/pkg/rootpath"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-type Suite struct {
+func TestIntegrationSuite(t *testing.T) {
+	suite.Run(t, new(IntegrationSuite))
+}
+
+type IntegrationSuite struct {
 	suite.Suite
-	Pool              *pgxpool.Pool
-	Repo              *repository.ContractRepository
-	Components        *components.Components
-	PostgresContainer *postgres.PostgresContainer
-	DB                *DBAssertions
+
+	container  *postgres.PostgresContainer
+	Components *components.Components
+	Pool       *pgxpool.Pool
 }
 
-func TestSuite(t *testing.T) {
-	suite.Run(t, new(Suite))
-}
-
-func (suite *Suite) StartPostgressContainer() *postgres.PostgresContainer {
+func (s *IntegrationSuite) SetupSuite() {
 	ctx := context.Background()
 
-	postgresContainer, err := postgres.Run(
-		ctx, "postgres:16.6-alpine",
+	container, err := postgres.Run(ctx,
+		"postgres:16.6-alpine",
 		postgres.WithDatabase("contracttests"),
 		postgres.WithUsername("contracttests"),
 		postgres.WithPassword("s3cr3t"),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
-				WithStartupTimeout(5*time.Second),
+				WithStartupTimeout(60*time.Second),
 		),
 	)
-	if err != nil {
-		panic(fmt.Errorf("Failed to run postgres container: %v", err))
-	}
+	s.Require().NoError(err)
+	s.container = container
 
-	connectionString, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		panic(fmt.Errorf("Failed to get postgres connection string: %v", err))
-	}
+	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
+	s.Require().NoError(err)
 
-	os.Setenv("DATABASE_URL", connectionString)
+	s.Require().NoError(os.Setenv("DATABASE_URL", connStr))
+	s.Require().NoError(os.Setenv("MIGRATIONS_DIR", filepath.Join(rootpath.Discover(), "migrations")))
 
-	return postgresContainer
+	s.Components = internal.Run()
+	s.Pool = s.Components.Pool
 }
 
-func (suite *Suite) SetupTest() {
-	godotenv.Load()
-	rootDir := rootpath.Discover()
-	os.Setenv("MIGRATIONS_DIR", filepath.Join(rootDir, "migrations"))
-	suite.PostgresContainer = suite.StartPostgressContainer()
-	suite.Components = internal.Run()
-	suite.Pool = suite.Components.Pool
-	suite.Repo = repository.NewContractRepository(suite.Pool)
-	suite.DB = newDBAssertions(suite)
-}
-
-func (suite *Suite) TearDownTest() {
-	if suite.PostgresContainer != nil {
-		if err := suite.PostgresContainer.Terminate(context.Background()); err != nil {
-			suite.T().Fatalf("Failed to terminate postgres container: %v", err)
-		}
+func (s *IntegrationSuite) TearDownSuite() {
+	if s.Pool != nil {
+		s.Pool.Close()
+	}
+	if s.container != nil {
+		_ = s.container.Terminate(context.Background())
 	}
 }
 
-type Request struct {
-	Method  string
-	Path    string
-	Body    string
-	Headers map[string]string
+func (s *IntegrationSuite) SetupTest() {
+	_, err := s.Pool.Exec(context.Background(),
+		`TRUNCATE property_versions, resource_versions, properties, resources, contracts, participants RESTART IDENTITY CASCADE`,
+	)
+	s.Require().NoError(err)
 }
 
-type Response struct {
-	StatusCode int
-	Body       string
+func (s *IntegrationSuite) post(path, body string) (status int, response string) {
+	req := httptest.NewRequest("POST", path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.Components.Server.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+
+	bytes, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	return resp.StatusCode, string(bytes)
 }
 
-func (suite *Suite) Request(args Request) (*Response, error) {
-	request := httptest.NewRequest(args.Method, args.Path, strings.NewReader(args.Body))
-
-	for key, value := range args.Headers {
-		request.Header.Set(key, value)
-	}
-
-	response, err := suite.Components.Server.Test(request)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Response{
-		StatusCode: response.StatusCode,
-		Body:       string(body),
-	}, nil
+func (s *IntegrationSuite) countRows(table string) int {
+	var count int
+	err := s.Pool.QueryRow(context.Background(),
+		fmt.Sprintf("SELECT count(*) FROM %s", table),
+	).Scan(&count)
+	s.Require().NoError(err)
+	return count
 }

@@ -75,7 +75,7 @@ func (rp *ResourcePath) ExtractNamedArgs(regex *regexp.Regexp) (map[string]strin
 	return args, true
 }
 
-func (rp *ResourcePath) ToResource(properties map[string]model.Property) model.Resource {
+func (rp *ResourcePath) ToResource(properties map[string]model.Property) *model.Resource {
 	if args, ok := rp.ExtractNamedArgs(consumerRestRequestRegex); ok {
 		return model.NewConsumedRestRequest(
 			args["provider"],
