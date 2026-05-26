@@ -1,4 +1,4 @@
-package upload_contract
+package publish_contract
 
 import (
 	"github.com/contracttesting/broker/server/internal/components"
@@ -8,6 +8,6 @@ import (
 func Register(components *components.Components) {
 	contractRepository := repository.NewContractRepository(components.Pool)
 	participantRepository := repository.NewParticipantRepository(components.Pool)
-	controller := NewUploadContractController(contractRepository, participantRepository)
-	components.Server.Post("/api/contracts", controller.Handle)
+	controller := NewPublishContractController(contractRepository, participantRepository)
+	components.Server.Post("/api/:participant/contracts/:version", controller.Handle)
 }

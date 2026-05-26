@@ -4,10 +4,16 @@ CREATE TABLE participants (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE environments (
+  id          BIGSERIAL PRIMARY KEY,
+  name        text NOT NULL UNIQUE,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE contracts (
   id              BIGSERIAL PRIMARY KEY,
   participant_id  BIGINT NOT NULL REFERENCES participants(id),
-  version         int  NOT NULL,
+  version         text NOT NULL,
   checksum        text NOT NULL,
   raw_payload     text NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),

@@ -8,7 +8,7 @@ import (
 )
 
 func newContractWithOnePetsResource(participantName string) *model.Contract {
-	contract := model.NewContract(model.NewParticipant(participantName), "raw")
+	contract := model.NewContract(model.NewParticipant(participantName), "1", "raw")
 	contract.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
 		"root":    model.NewProperty("root", "object", false),
 		"root.id": model.NewProperty("root.id", "string", false),

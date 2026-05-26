@@ -72,7 +72,7 @@ func (s *IntegrationSuite) TearDownSuite() {
 
 func (s *IntegrationSuite) SetupTest() {
 	_, err := s.Pool.Exec(context.Background(),
-		`TRUNCATE property_versions, resource_versions, properties, resources, contracts, participants RESTART IDENTITY CASCADE`,
+		`TRUNCATE property_versions, resource_versions, properties, resources, contracts, participants, environments RESTART IDENTITY CASCADE`,
 	)
 	s.Require().NoError(err)
 }

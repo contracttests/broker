@@ -1,0 +1,75 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+const (
+	existsEnvironmentByNameQuery = `
+		SELECT EXISTS(
+			SELECT
+				1
+			FROM
+				environments
+			WHERE
+				name = $1
+		)
+	`
+
+	findEnvironmentByNameQuery = `
+		SELECT
+			id, name
+		FROM
+			environments
+		WHERE
+			name = $1
+	`
+
+	insertEnvironmentQuery = `
+		INSERT INTO environments
+			(name)
+		VALUES
+			($1)
+		RETURNING id
+	`
+)
+
+type EnvironmentRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewEnvironmentRepository(pool *pgxpool.Pool) *EnvironmentRepository {
+	return &EnvironmentRepository{pool: pool}
+}
+
+func (r *EnvironmentRepository) ExistsByName(ctx context.Context, name string) bool {
+	var exists bool
+	if err := r.pool.QueryRow(ctx, existsEnvironmentByNameQuery, name).Scan(&exists); err != nil {
+		panic(fmt.Errorf("error finding environment by name: %w", err))
+	}
+	return exists
+}
+
+func (r *EnvironmentRepository) FindByName(ctx context.Context, name string) (*model.Environment, bool) {
+	e := &model.Environment{}
+	err := r.pool.QueryRow(ctx, findEnvironmentByNameQuery, name).Scan(&e.ID, &e.Name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false
+	}
+	if err != nil {
+		panic(fmt.Errorf("error finding environment by name: %w", err))
+	}
+	return e, true
+}
+
+func (r *EnvironmentRepository) Create(ctx context.Context, e *model.Environment) {
+	if err := r.pool.QueryRow(ctx, insertEnvironmentQuery, e.Name).Scan(&e.ID); err != nil {
+		panic(fmt.Errorf("error inserting environment: %w", err))
+	}
+}

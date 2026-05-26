@@ -32,6 +32,7 @@ func TestResource_PrimaryHash_ConsumerDirection_EqualsConsumerHash(t *testing.T)
 func TestResource_ConsumerHash_RestResponse_IncludesStatusCode(t *testing.T) {
 	a := model.NewConsumedRestResponse("pets-service", "/pets", "get", "200", nil)
 	a.AddParticipant(model.NewParticipant("web-app"))
+
 	b := model.NewConsumedRestResponse("pets-service", "/pets", "get", "404", nil)
 	b.AddParticipant(model.NewParticipant("web-app"))
 

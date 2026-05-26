@@ -9,15 +9,16 @@ import (
 
 type Contract struct {
 	ID          int64
-	Version     int
+	Version     string
 	RawContract string
 	Resources   map[string]Resource
 	Participant *Participant
 }
 
-func NewContract(participant *Participant, rawContract string) *Contract {
+func NewContract(participant *Participant, version string, rawContract string) *Contract {
 	return &Contract{
 		Participant: participant,
+		Version:     version,
 		RawContract: rawContract,
 	}
 }

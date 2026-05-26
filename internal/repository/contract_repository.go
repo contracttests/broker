@@ -20,16 +20,20 @@ const (
 		SELECT EXISTS(SELECT 1 FROM contracts WHERE participant_id = $1)
 	`
 
+	hasContractForVersionQuery = `
+		SELECT EXISTS(SELECT 1 FROM contracts WHERE participant_id = $1 AND version = $2)
+	`
+
+	loadChecksumForVersionQuery = `
+		SELECT checksum FROM contracts WHERE participant_id = $1 AND version = $2
+	`
+
 	insertContractQuery = `
 		INSERT INTO contracts
 			(participant_id, version, checksum, raw_payload)
-		SELECT
-			$1, COALESCE(MAX(version), 0) + 1, $2, $3
-		FROM
-			contracts
-		WHERE
-			participant_id = $1
-		RETURNING id, version
+		VALUES
+			($1, $2, $3, $4)
+		RETURNING id
 	`
 
 	insertResourceQuery = `
@@ -202,6 +206,29 @@ func (r *ContractRepository) HasContractsForParticipant(ctx context.Context, par
 	return exists
 }
 
+func (r *ContractRepository) HasContractForVersion(ctx context.Context, participantID int64, version string) bool {
+	var exists bool
+
+	if err := r.pool.QueryRow(ctx, hasContractForVersionQuery, participantID, version).Scan(&exists); err != nil {
+		panic(fmt.Errorf("error checking contract version: %w", err))
+	}
+
+	return exists
+}
+
+func (r *ContractRepository) LoadChecksumForVersion(ctx context.Context, participantID int64, version string) (string, bool) {
+	var checksum string
+
+	err := r.pool.QueryRow(ctx, loadChecksumForVersionQuery, participantID, version).Scan(&checksum)
+	if err == nil {
+		return checksum, true
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false
+	}
+	panic(fmt.Errorf("error loading checksum for version: %w", err))
+}
+
 func (r *ContractRepository) Create(
 	ctx context.Context,
 	contract *model.Contract,
@@ -314,9 +341,10 @@ func (r *ContractRepository) insertContract(
 		ctx,
 		insertContractQuery,
 		contract.ParticipantID(),
+		contract.Version,
 		contract.Checksum(),
 		contract.RawContract,
-	).Scan(&contract.ID, &contract.Version); err != nil {
+	).Scan(&contract.ID); err != nil {
 		panic(fmt.Errorf("error inserting contract: %w", err))
 	}
 }

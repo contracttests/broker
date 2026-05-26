@@ -12,7 +12,7 @@ type tableRow struct {
 	ParticipantName string
 
 	ContractID          int64
-	ContractVersion     int
+	ContractVersion     string
 	ContractRawContract string
 	ContractCreatedAt   time.Time
 

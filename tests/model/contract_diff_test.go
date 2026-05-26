@@ -90,7 +90,7 @@ func TestDiff_RemovedResource(t *testing.T) {
 func TestDiff_ModifiedResource_PropertyAdded(t *testing.T) {
 	prev := newContractWithOnePetsResource("pets-service")
 
-	next := model.NewContract(model.NewParticipant("pets-service"), "raw")
+	next := model.NewContract(model.NewParticipant("pets-service"), "1", "raw")
 	next.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
 		"root":      model.NewProperty("root", "object", false),
 		"root.id":   model.NewProperty("root.id", "string", false),
@@ -111,7 +111,7 @@ func TestDiff_ModifiedResource_PropertyAdded(t *testing.T) {
 }
 
 func TestDiff_ModifiedResource_PropertyRemoved(t *testing.T) {
-	prev := model.NewContract(model.NewParticipant("pets-service"), "raw")
+	prev := model.NewContract(model.NewParticipant("pets-service"), "1", "raw")
 	prev.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
 		"root":      model.NewProperty("root", "object", false),
 		"root.id":   model.NewProperty("root.id", "string", false),
@@ -136,7 +136,7 @@ func TestDiff_ModifiedResource_PropertyRemoved(t *testing.T) {
 func TestDiff_ModifiedResource_PropertyTypeChanged(t *testing.T) {
 	prev := newContractWithOnePetsResource("pets-service")
 
-	next := model.NewContract(model.NewParticipant("pets-service"), "raw")
+	next := model.NewContract(model.NewParticipant("pets-service"), "1", "raw")
 	next.AddResource(model.NewProvidedRestResponse("/pets", "get", "200", map[string]model.Property{
 		"root":    model.NewProperty("root", "object", false),
 		"root.id": model.NewProperty("root.id", "int", false),
