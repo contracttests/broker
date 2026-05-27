@@ -72,7 +72,7 @@ func (s *IntegrationSuite) TearDownSuite() {
 
 func (s *IntegrationSuite) SetupTest() {
 	_, err := s.Pool.Exec(context.Background(),
-		`TRUNCATE property_versions, resource_versions, properties, resources, contracts, participants, environments RESTART IDENTITY CASCADE`,
+		`TRUNCATE compatibility_matrix, deployments, property_versions, resource_versions, properties, resources, contracts, participants, environments RESTART IDENTITY CASCADE`,
 	)
 	s.Require().NoError(err)
 }
@@ -80,6 +80,19 @@ func (s *IntegrationSuite) SetupTest() {
 func (s *IntegrationSuite) post(path, body string) (status int, response string) {
 	req := httptest.NewRequest("POST", path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.Components.Server.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+
+	bytes, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	return resp.StatusCode, string(bytes)
+}
+
+func (s *IntegrationSuite) get(path string) (status int, response string) {
+	req := httptest.NewRequest("GET", path, nil)
 
 	resp, err := s.Components.Server.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
 	s.Require().NoError(err)

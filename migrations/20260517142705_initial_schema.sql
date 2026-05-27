@@ -83,3 +83,32 @@ CREATE TABLE resource_versions (
 
 CREATE INDEX ON resource_versions (resource_id, contract_id);
 CREATE INDEX ON resource_versions (contract_id);
+
+CREATE TABLE deployments (
+  id              BIGSERIAL PRIMARY KEY,
+  participant_id  BIGINT NOT NULL REFERENCES participants(id),
+  version         text NOT NULL,
+  environment_id  BIGINT NOT NULL REFERENCES environments(id),
+  rollback        boolean NOT NULL,
+  deployed_at     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ON deployments (participant_id, environment_id, deployed_at DESC);
+
+CREATE TABLE compatibility_matrix (
+  id                         BIGSERIAL PRIMARY KEY,
+  participant_id             BIGINT NOT NULL REFERENCES participants(id),
+  version                    text NOT NULL,
+  counterpart_participant_id BIGINT REFERENCES participants(id),
+  counterpart_version        text,
+  deployable                 boolean NOT NULL,
+  created_at                 timestamptz NOT NULL DEFAULT now(),
+
+  CHECK (
+    (counterpart_participant_id IS NULL AND counterpart_version IS NULL)
+    OR
+    (counterpart_participant_id IS NOT NULL)
+  )
+);
+
+CREATE INDEX ON compatibility_matrix (participant_id, version, created_at DESC);

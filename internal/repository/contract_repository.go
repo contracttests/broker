@@ -135,6 +135,78 @@ const (
 		ORDER BY r.id
 	`
 
+	findContractTreeByNameAndVersionQuery = `
+		SELECT
+			c.id,
+			c.version,
+			c.raw_payload,
+			c.created_at,
+			pa.id,
+			pa.name,
+			r.id,
+			r.direction,
+			r.kind,
+			r.provider,
+			r.endpoint,
+			r.method,
+			r.status_code,
+			r.provider_hash,
+			r.consumer_hash,
+			r.created_at,
+			p.id,
+			p.path,
+			pv.type,
+			pv.optional,
+			pv.change
+		FROM contracts c
+		JOIN participants pa ON pa.id = c.participant_id
+		JOIN resources r ON r.participant_id = c.participant_id
+		JOIN LATERAL (
+			SELECT change
+			FROM resource_versions
+			WHERE resource_id = r.id AND contract_id <= c.id
+			ORDER BY contract_id DESC
+			LIMIT 1
+		) rv ON true
+		JOIN properties p ON p.resource_id = r.id
+		JOIN LATERAL (
+			SELECT type, optional, change
+			FROM property_versions
+			WHERE property_id = p.id AND contract_id <= c.id
+			ORDER BY contract_id DESC
+			LIMIT 1
+		) pv ON true
+		WHERE pa.name = $1
+		  AND c.version = $2
+		  AND rv.change = 'added'
+		ORDER BY r.id
+	`
+
+	findCurrentConsumersOfProviderInEnvQuery = `
+		WITH current_deployments AS (
+			SELECT DISTINCT ON (d.participant_id)
+				d.participant_id, d.version, c.id AS contract_id
+			FROM deployments d
+			JOIN contracts c ON c.participant_id = d.participant_id AND c.version = d.version
+			WHERE d.environment_id = $2
+			ORDER BY d.participant_id, d.deployed_at DESC
+		)
+		SELECT DISTINCT cd.participant_id, pa.name, cd.version
+		FROM current_deployments cd
+		JOIN resources r ON r.participant_id = cd.participant_id
+		JOIN participants pa ON pa.id = cd.participant_id
+		JOIN LATERAL (
+			SELECT change
+			FROM resource_versions
+			WHERE resource_id = r.id AND contract_id <= cd.contract_id
+			ORDER BY contract_id DESC
+			LIMIT 1
+		) rv ON true
+		WHERE r.direction = 'consumes'
+		  AND r.provider_hash = $1
+		  AND rv.change = 'added'
+	`
+
 	findResourcesByDirectionAndProviderHashQuery = `
 		SELECT
 			r.id,
@@ -493,6 +565,25 @@ func (r *ContractRepository) LoadLatestContractByName(
 
 	defer rows.Close()
 
+	contract, _ := scanContractTree(rows)
+	return contract
+}
+
+func (r *ContractRepository) LoadContractByNameAndVersion(
+	ctx context.Context,
+	name string,
+	version string,
+) (*model.Contract, bool) {
+	rows, err := r.pool.Query(ctx, findContractTreeByNameAndVersionQuery, name, version)
+	if err != nil {
+		panic(fmt.Errorf("error loading contract tree by name and version: %w", err))
+	}
+	defer rows.Close()
+
+	return scanContractTree(rows)
+}
+
+func scanContractTree(rows pgx.Rows) (*model.Contract, bool) {
 	var found bool
 	var contract *model.Contract
 
@@ -546,7 +637,35 @@ func (r *ContractRepository) LoadLatestContractByName(
 		}
 	}
 
-	return contract
+	return contract, found
+}
+
+type CurrentConsumerInEnv struct {
+	ParticipantID   int64
+	ParticipantName string
+	Version         string
+}
+
+func (r *ContractRepository) FindCurrentConsumersOfProviderInEnv(
+	ctx context.Context,
+	providerHash string,
+	environmentID int64,
+) []CurrentConsumerInEnv {
+	rows, err := r.pool.Query(ctx, findCurrentConsumersOfProviderInEnvQuery, providerHash, environmentID)
+	if err != nil {
+		panic(fmt.Errorf("error finding current consumers of provider in env: %w", err))
+	}
+	defer rows.Close()
+
+	var consumers []CurrentConsumerInEnv
+	for rows.Next() {
+		var c CurrentConsumerInEnv
+		if err := rows.Scan(&c.ParticipantID, &c.ParticipantName, &c.Version); err != nil {
+			panic(fmt.Errorf("error scanning current consumer row: %w", err))
+		}
+		consumers = append(consumers, c)
+	}
+	return consumers
 }
 
 func (r *ContractRepository) LoadProviderResource(ctx context.Context, consumer model.Resource) (model.Resource, error) {
