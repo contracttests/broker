@@ -7,20 +7,9 @@ import (
 
 func Register(components *components.Components) {
 	participantRepository := repository.NewParticipantRepository(components.Pool)
-	contractRepository := repository.NewContractRepository(components.Pool)
-	environmentRepository := repository.NewEnvironmentRepository(components.Pool)
-	deploymentRepository := repository.NewDeploymentRepository(components.Pool)
 	compatibilityMatrixRepository := repository.NewCompatibilityMatrixRepository(components.Pool)
-	clockRepository := repository.NewClockRepository(components.Pool)
 
-	handler := NewCanIDeployHandler(
-		participantRepository,
-		contractRepository,
-		environmentRepository,
-		deploymentRepository,
-		compatibilityMatrixRepository,
-		clockRepository,
-	)
+	handler := NewCanIDeployHandler(participantRepository, compatibilityMatrixRepository)
 
 	components.Server.Get("/api/:participant/can-i-deploy", handler.Handle)
 }
