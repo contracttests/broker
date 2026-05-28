@@ -7,6 +7,7 @@ import (
 
 	"github.com/contracttesting/broker/internal/model"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,6 +37,15 @@ const (
 			(name)
 		VALUES
 			($1)
+		RETURNING id
+	`
+
+	renameParticipantQuery = `
+		UPDATE participants
+		SET
+			name = $2
+		WHERE
+			name = $1
 		RETURNING id
 	`
 )
@@ -72,4 +82,23 @@ func (r *ParticipantRepository) Create(ctx context.Context, p *model.Participant
 	if err := r.pool.QueryRow(ctx, insertParticipantQuery, p.Name).Scan(&p.ID); err != nil {
 		panic(fmt.Errorf("error inserting participant: %w", err))
 	}
+}
+
+func (r *ParticipantRepository) Rename(ctx context.Context, oldName, newName string) (found, conflict bool) {
+	var id int64
+	err := r.pool.QueryRow(ctx, renameParticipantQuery, oldName, newName).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, false
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return false, true
+	}
+
+	if err != nil {
+		panic(fmt.Errorf("error renaming participant: %w", err))
+	}
+
+	return true, false
 }

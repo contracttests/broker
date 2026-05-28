@@ -7,6 +7,7 @@ import (
 	"github.com/contracttesting/broker/internal/features/create_participant"
 	"github.com/contracttesting/broker/internal/features/publish_contract"
 	"github.com/contracttesting/broker/internal/features/record_deployment"
+	"github.com/contracttesting/broker/internal/features/rename_participant"
 )
 
 func Run() *components.Components {
@@ -17,6 +18,7 @@ func Run() *components.Components {
 	publish_contract.Register(components)
 	can_i_deploy.Register(components)
 	record_deployment.Register(components)
+	rename_participant.Register(components)
 
 	return components
 }
