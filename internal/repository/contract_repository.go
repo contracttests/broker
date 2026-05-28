@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/contracttesting/broker/internal/contract_differ"
+	"github.com/contracttesting/broker/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -229,6 +230,10 @@ const (
 			resources r
 		JOIN
 			participants pa ON pa.id = r.participant_id
+		LEFT JOIN
+			deployments d ON d.participant_id = r.participant_id
+		LEFT JOIN
+			environments e ON e.id = d.environment_id
 		JOIN LATERAL (
 			SELECT change
 			FROM resource_versions
@@ -241,9 +246,7 @@ const (
 			properties p ON p.resource_id = r.id
 		LEFT JOIN LATERAL (
 			SELECT
-				type,
-				optional,
-				change
+				type, optional, change
 			FROM
 				property_versions
 			WHERE
@@ -257,6 +260,8 @@ const (
 			r.provider_hash = $2
 		AND
 			rv.change = 'added'
+		AND
+			e.id = $3
 	`
 )
 
@@ -342,7 +347,7 @@ func (r *ContractRepository) Update(
 
 	contract := r.LoadLatestContractByName(ctx, next.Participant.Name)
 
-	diff := contract.Diff(next)
+	diff := contract_differ.Diff(contract, next)
 
 	if len(diff.Resources) == 0 {
 		if err := tx.Commit(ctx); err != nil {
@@ -358,7 +363,7 @@ func (r *ContractRepository) Update(
 
 	for _, resourceChange := range diff.Resources {
 		switch resourceChange.Kind {
-		case model.ChangeAdded:
+		case contract_differ.ChangeAdded:
 			resource := resourceChange.Resource
 			r.insertResource(ctx, tx, &resource)
 			r.insertResourceVersion(ctx, tx, newInsertResourceVersionRowAdded(next, resource))
@@ -368,28 +373,28 @@ func (r *ContractRepository) Update(
 				r.insertPropertyVersion(ctx, tx, newInsertPropertyVersionRowAdded(next, property))
 			}
 
-		case model.ChangeModified:
+		case contract_differ.ChangeModified:
 			resource := contract.Resources[resourceChange.Resource.PrimaryHash()]
 
 			for _, propertyChange := range resourceChange.Properties {
 				switch propertyChange.Kind {
-				case model.ChangeAdded:
+				case contract_differ.ChangeAdded:
 					property := propertyChange.After
 					r.insertNewProperty(ctx, tx, resource.ID, &property)
 					r.insertPropertyVersion(ctx, tx, newInsertPropertyVersionRowAdded(next, property))
 
-				case model.ChangeModified:
+				case contract_differ.ChangeModified:
 					property := propertyChange.After
 					property.ID = resource.Properties[propertyChange.After.Path].ID
 					r.insertPropertyVersion(ctx, tx, newInsertPropertyVersionRowModified(next, property))
 
-				case model.ChangeRemoved:
+				case contract_differ.ChangeRemoved:
 					property := resource.Properties[propertyChange.Before.Path]
 					r.insertPropertyVersion(ctx, tx, newInsertPropertyVersionRowRemoved(next, property))
 				}
 			}
 
-		case model.ChangeRemoved:
+		case contract_differ.ChangeRemoved:
 			resource := contract.Resources[resourceChange.Resource.PrimaryHash()]
 			r.insertResourceVersion(ctx, tx, newInsertResourceVersionRowRemoved(next, resource))
 
@@ -616,7 +621,7 @@ func scanContractTree(rows pgx.Rows) (*model.Contract, bool) {
 			panic(fmt.Errorf("error scanning contract tree row: %w", err))
 		}
 
-		if row.PropertyVersionChange == string(model.ChangeRemoved) {
+		if row.PropertyVersionChange == string(contract_differ.ChangeRemoved) {
 			continue
 		}
 
@@ -668,12 +673,17 @@ func (r *ContractRepository) FindCurrentConsumersOfProviderInEnv(
 	return consumers
 }
 
-func (r *ContractRepository) LoadProviderResource(ctx context.Context, consumer model.Resource) (model.Resource, error) {
+func (r *ContractRepository) LoadProviderResourceOfConsumerAndEnvironment(
+	ctx context.Context,
+	consumer model.Resource,
+	environment *model.Environment,
+) (model.Resource, error) {
 	rows, err := r.pool.Query(
 		ctx,
 		findResourcesByDirectionAndProviderHashQuery,
 		string(model.Provides),
 		consumer.ProviderHash(),
+		environment.ID,
 	)
 
 	if err != nil {
@@ -724,12 +734,17 @@ func (r *ContractRepository) LoadProviderResource(ctx context.Context, consumer 
 	return provider, nil
 }
 
-func (r *ContractRepository) FindConsumersOfProvider(ctx context.Context, provider model.Resource) []model.Resource {
+func (r *ContractRepository) FindConsumersOfProviderAndEnvironment(
+	ctx context.Context,
+	provider model.Resource,
+	environment *model.Environment,
+) []model.Resource {
 	rows, err := r.pool.Query(
 		ctx,
 		findResourcesByDirectionAndProviderHashQuery,
 		string(model.Consumes),
 		provider.ProviderHash(),
+		environment.ID,
 	)
 
 	if err != nil {

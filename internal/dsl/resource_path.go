@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/contracttesting/broker/internal/model"
 )
 
 var (

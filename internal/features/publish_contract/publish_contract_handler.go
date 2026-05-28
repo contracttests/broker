@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/contracttesting/broker/server/internal/dsl"
-	"github.com/contracttesting/broker/server/internal/model"
-	"github.com/contracttesting/broker/server/internal/repository"
+	"github.com/contracttesting/broker/internal/dsl"
+	"github.com/contracttesting/broker/internal/model"
+	"github.com/contracttesting/broker/internal/repository"
 	"github.com/gofiber/fiber/v3"
 )
 

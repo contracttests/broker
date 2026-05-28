@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contracttesting/broker/server/internal"
-	"github.com/contracttesting/broker/server/internal/components"
-	"github.com/contracttesting/broker/server/pkg/rootpath"
+	"github.com/contracttesting/broker/internal"
+	"github.com/contracttesting/broker/internal/components"
+	"github.com/contracttesting/broker/pkg/rootpath"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"

@@ -3,6 +3,7 @@ package model
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -27,15 +28,23 @@ func (resourceKind *ResourceKind) String() string {
 }
 
 type Resource struct {
-	ID          int64
-	Direction   Direction
-	Kind        ResourceKind
-	Provider    string
-	Endpoint    string
-	Method      string
-	StatusCode  string
-	Properties  map[string]Property
-	Participant *Participant
+	ID          int64               `json:"-"`
+	Direction   Direction           `json:"direction"`
+	Kind        ResourceKind        `json:"kind"`
+	Provider    string              `json:"provider"`
+	Endpoint    string              `json:"endpoint"`
+	Method      string              `json:"method"`
+	StatusCode  string              `json:"status_code"`
+	Properties  map[string]Property `json:"-"`
+	Participant *Participant        `json:"-"`
+}
+
+func (resouce *Resource) HumanReadable() string {
+	if resouce.Kind == RestRequest {
+		return fmt.Sprintf(", %s, %s", resouce.Endpoint, resouce.Method)
+	}
+
+	return fmt.Sprintf(", %s, %s, %s", resouce.Endpoint, resouce.Method, resouce.StatusCode)
 }
 
 func (resouce *Resource) AddParticipant(participant *Participant) {

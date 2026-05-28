@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type CompatibilityMatrixRow struct {
+type CompatibilityMatrix struct {
 	ID                       int64
 	ParticipantID            int64
 	Version                  string

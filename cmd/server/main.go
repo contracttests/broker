@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/contracttesting/broker/server/internal"
+	"github.com/contracttesting/broker/internal"
 	"github.com/joho/godotenv"
 )
 

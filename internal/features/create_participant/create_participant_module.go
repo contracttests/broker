@@ -1,8 +1,8 @@
 package create_participant
 
 import (
-	"github.com/contracttesting/broker/server/internal/components"
-	"github.com/contracttesting/broker/server/internal/repository"
+	"github.com/contracttesting/broker/internal/components"
+	"github.com/contracttesting/broker/internal/repository"
 )
 
 func Register(components *components.Components) {

@@ -3,8 +3,8 @@ package record_deployment
 import (
 	"strings"
 
-	"github.com/contracttesting/broker/server/internal/model"
-	"github.com/contracttesting/broker/server/internal/repository"
+	"github.com/contracttesting/broker/internal/model"
+	"github.com/contracttesting/broker/internal/repository"
 	"github.com/gofiber/fiber/v3"
 )
 

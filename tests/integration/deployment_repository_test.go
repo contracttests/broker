@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/contracttesting/broker/server/internal/repository"
+	"github.com/contracttesting/broker/internal/repository"
 )
 
 const stagingEnvBody = `{"name":"staging"}`

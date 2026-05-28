@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contracttesting/broker/server/pkg/migrator"
+	"github.com/contracttesting/broker/pkg/migrator"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"

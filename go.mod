@@ -1,4 +1,4 @@
-module github.com/contracttesting/broker/server
+module github.com/contracttesting/broker
 
 go 1.25.0
 

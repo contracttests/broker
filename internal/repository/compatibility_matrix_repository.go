@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/contracttesting/broker/internal/model"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,7 +25,7 @@ func NewCompatibilityMatrixRepository(pool *pgxpool.Pool) *CompatibilityMatrixRe
 	return &CompatibilityMatrixRepository{pool: pool}
 }
 
-func (r *CompatibilityMatrixRepository) Insert(ctx context.Context, row *model.CompatibilityMatrixRow) {
+func (r *CompatibilityMatrixRepository) Insert(ctx context.Context, row *model.CompatibilityMatrix) {
 	var counterpartID sql.NullInt64
 	if row.CounterpartParticipantID != nil {
 		counterpartID = sql.NullInt64{Int64: *row.CounterpartParticipantID, Valid: true}

@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/contracttesting/broker/server/internal/model"
+	"github.com/contracttesting/broker/internal/contract_differ"
+	"github.com/contracttesting/broker/internal/model"
 )
 
 type tableRow struct {
@@ -87,18 +88,18 @@ type insertPropertyVersionRow struct {
 }
 
 func newInsertPropertyVersionRowAdded(c *model.Contract, p model.Property) *insertPropertyVersionRow {
-	return newInsertPropertyVersionRow(c, p, model.ChangeAdded)
+	return newInsertPropertyVersionRow(c, p, contract_differ.ChangeAdded)
 }
 
 func newInsertPropertyVersionRowModified(c *model.Contract, p model.Property) *insertPropertyVersionRow {
-	return newInsertPropertyVersionRow(c, p, model.ChangeModified)
+	return newInsertPropertyVersionRow(c, p, contract_differ.ChangeModified)
 }
 
 func newInsertPropertyVersionRowRemoved(c *model.Contract, p model.Property) *insertPropertyVersionRow {
-	return newInsertPropertyVersionRow(c, p, model.ChangeRemoved)
+	return newInsertPropertyVersionRow(c, p, contract_differ.ChangeRemoved)
 }
 
-func newInsertPropertyVersionRow(c *model.Contract, p model.Property, change model.ChangeKind) *insertPropertyVersionRow {
+func newInsertPropertyVersionRow(c *model.Contract, p model.Property, change contract_differ.ChangeKind) *insertPropertyVersionRow {
 	return &insertPropertyVersionRow{
 		PropertyID: p.ID,
 		ContractID: c.ID,
@@ -118,7 +119,7 @@ func newInsertResourceVersionRowAdded(c *model.Contract, r model.Resource) *inse
 	return &insertResourceVersionRow{
 		ResourceID: r.ID,
 		ContractID: c.ID,
-		Change:     string(model.ChangeAdded),
+		Change:     string(contract_differ.ChangeAdded),
 	}
 }
 
@@ -126,6 +127,6 @@ func newInsertResourceVersionRowRemoved(c *model.Contract, r model.Resource) *in
 	return &insertResourceVersionRow{
 		ResourceID: r.ID,
 		ContractID: c.ID,
-		Change:     string(model.ChangeRemoved),
+		Change:     string(contract_differ.ChangeRemoved),
 	}
 }

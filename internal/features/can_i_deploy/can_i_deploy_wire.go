@@ -1,15 +1,21 @@
 package can_i_deploy
 
-import (
-	"github.com/contracttesting/broker/server/internal/components"
-	"github.com/contracttesting/broker/server/internal/repository"
+import "github.com/contracttesting/broker/internal/compatibility_checker"
+
+const (
+	CanIDeployInvalidInput = "can-i-deploy invalid input"
+	ParticipantNotFound    = "participant not found"
+	EnvironmentNotFound    = "environment not found"
+	ContractNotFound       = "contract not found"
 )
 
-func Register(components *components.Components) {
-	participantRepository := repository.NewParticipantRepository(components.Pool)
-	compatibilityMatrixRepository := repository.NewCompatibilityMatrixRepository(components.Pool)
+type CanIDeployResponse struct {
+	Success    bool                                   `json:"success"`
+	Deployable bool                                   `json:"deployable"`
+	Breaks     []compatibility_checker.BreakingChange `json:"breaks,omitempty"`
+}
 
-	handler := NewCanIDeployHandler(participantRepository, compatibilityMatrixRepository)
-
-	components.Server.Get("/api/:participant/can-i-deploy", handler.Handle)
+type CanIDeployErrorResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }

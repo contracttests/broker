@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/contracttesting/broker/server/pkg/migrator"
+	"github.com/contracttesting/broker/pkg/migrator"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
