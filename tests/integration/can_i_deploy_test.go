@@ -198,3 +198,172 @@ func (s *IntegrationSuite) TestCanIDeploy_HappyPath() {
 		`SELECT deployable FROM compatibility_matrix WHERE version = 'v2'`).Scan(&v2Deployable))
 	s.False(v2Deployable)
 }
+
+// app@v1 consumes one endpoint from each of three providers. None of them is
+// published or deployed, so each dependency resolves to a non-deployable,
+// provider-not-found row: one matrix record per dependency.
+const appV1ThreeDependenciesContract = `
+{
+  "consumes": {
+    "users":   { "rest": { "/users":   { "get": { "responses": { "200": "User" } } } } },
+    "auth":    { "rest": { "/auth":    { "get": { "responses": { "200": "Token" } } } } },
+    "catalog": { "rest": { "/catalog": { "get": { "responses": { "200": "Product" } } } } }
+  },
+  "schemas": {
+    "User":    { "type": "object", "properties": { "id":    { "type": "string" } } },
+    "Token":   { "type": "object", "properties": { "value": { "type": "string" } } },
+    "Product": { "type": "object", "properties": { "id":    { "type": "string" } } }
+  }
+}`
+
+func (s *IntegrationSuite) TestCanIDeploy_RecordsOneRowPerDependency() {
+	status, _ := s.post("/api/participants", `{"name":"app"}`)
+	s.Require().Equal(http.StatusOK, status)
+
+	status, _ = s.post("/api/environments", `{"name":"production"}`)
+	s.Require().Equal(http.StatusOK, status)
+
+	// Only this contract is uploaded — none of its three providers exist.
+	status, _ = s.post("/api/contracts",
+		`{"name":"app","version":"v1","contract":`+appV1ThreeDependenciesContract+`}`)
+	s.Require().Equal(http.StatusOK, status)
+
+	status, body := s.post("/api/can-i-deploy",
+		`{"name":"app","version":"v1","environment":"production"}`)
+	s.Equal(http.StatusOK, status)
+
+	// Not deployable (no provider is present), but the check still fans out to
+	// one break per consumed service.
+	var got struct {
+		Success    bool `json:"success"`
+		Deployable bool `json:"deployable"`
+		Breaks     map[string][]struct {
+			LeftResource struct {
+				Provider string `json:"provider"`
+			} `json:"left_resource"`
+			Reason string `json:"reason"`
+		} `json:"breaks"`
+	}
+	s.Require().NoError(json.Unmarshal([]byte(body), &got))
+	s.True(got.Success)
+	s.False(got.Deployable)
+
+	providers := make([]string, 0, len(got.Breaks["app"]))
+	for _, b := range got.Breaks["app"] {
+		s.Equal("provider_resource_not_found", b.Reason)
+		providers = append(providers, b.LeftResource.Provider)
+	}
+	s.ElementsMatch([]string{"users", "auth", "catalog"}, providers)
+
+	// One matrix record per dependency, each non-deployable.
+	s.Equal(3, s.countRows("compatibility_matrix"))
+	var nonDeployable int
+	s.Require().NoError(s.Pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM compatibility_matrix WHERE version = 'v1' AND NOT deployable`).
+		Scan(&nonDeployable))
+	s.Equal(3, nonDeployable)
+}
+
+// users@v1, auth@v1 and catalog@v1 each provide one endpoint. app@v1 consumes
+// all three: it matches users and auth, but expects catalog's "id" as an
+// integer while catalog provides a string — one breaking dependency out of three.
+const usersV1ProviderContract = `
+{
+  "provides": { "rest": { "/users": { "get": { "responses": { "200": "User" } } } } },
+  "schemas": { "User": { "type": "object", "properties": { "id": { "type": "string" } } } }
+}`
+
+const authV1ProviderContract = `
+{
+  "provides": { "rest": { "/auth": { "get": { "responses": { "200": "Token" } } } } },
+  "schemas": { "Token": { "type": "object", "properties": { "value": { "type": "string" } } } }
+}`
+
+const catalogV1ProviderContract = `
+{
+  "provides": { "rest": { "/catalog": { "get": { "responses": { "200": "Product" } } } } },
+  "schemas": { "Product": { "type": "object", "properties": { "id": { "type": "string" } } } }
+}`
+
+const appV1MixedDependenciesContract = `
+{
+  "consumes": {
+    "users":   { "rest": { "/users":   { "get": { "responses": { "200": "User" } } } } },
+    "auth":    { "rest": { "/auth":    { "get": { "responses": { "200": "Token" } } } } },
+    "catalog": { "rest": { "/catalog": { "get": { "responses": { "200": "Product" } } } } }
+  },
+  "schemas": {
+    "User":    { "type": "object", "properties": { "id":    { "type": "string" } } },
+    "Token":   { "type": "object", "properties": { "value": { "type": "string" } } },
+    "Product": { "type": "object", "properties": { "id":    { "type": "integer" } } }
+  }
+}`
+
+func (s *IntegrationSuite) TestCanIDeploy_TwoDeployableOneBreaking() {
+	mustPost := func(path, body string) {
+		status, _ := s.post(path, body)
+		s.Require().Equalf(http.StatusOK, status, "POST %s", path)
+	}
+
+	for _, name := range []string{"users", "auth", "catalog", "app"} {
+		mustPost("/api/participants", `{"name":"`+name+`"}`)
+	}
+	mustPost("/api/environments", `{"name":"production"}`)
+
+	// Publish and deploy each provider to production so the check can resolve them.
+	mustPost("/api/contracts", `{"name":"users","version":"v1","contract":`+usersV1ProviderContract+`}`)
+	mustPost("/api/deployments", `{"name":"users","version":"v1","environment":"production"}`)
+	mustPost("/api/contracts", `{"name":"auth","version":"v1","contract":`+authV1ProviderContract+`}`)
+	mustPost("/api/deployments", `{"name":"auth","version":"v1","environment":"production"}`)
+	mustPost("/api/contracts", `{"name":"catalog","version":"v1","contract":`+catalogV1ProviderContract+`}`)
+	mustPost("/api/deployments", `{"name":"catalog","version":"v1","environment":"production"}`)
+
+	mustPost("/api/contracts", `{"name":"app","version":"v1","contract":`+appV1MixedDependenciesContract+`}`)
+
+	status, body := s.post("/api/can-i-deploy", `{"name":"app","version":"v1","environment":"production"}`)
+	s.Equal(http.StatusOK, status)
+
+	// Two dependencies match; catalog breaks on a type mismatch, so app as a
+	// whole is not deployable.
+	var got struct {
+		Success    bool `json:"success"`
+		Deployable bool `json:"deployable"`
+		Breaks     map[string][]struct {
+			LeftResource struct {
+				Provider string `json:"provider"`
+			} `json:"left_resource"`
+			Reason   string `json:"reason"`
+			Property string `json:"property"`
+		} `json:"breaks"`
+	}
+	s.Require().NoError(json.Unmarshal([]byte(body), &got))
+	s.True(got.Success)
+	s.False(got.Deployable)
+
+	s.Require().Len(got.Breaks["app"], 1)
+	s.Equal("catalog", got.Breaks["app"][0].LeftResource.Provider)
+	s.Equal("type_mismatch", got.Breaks["app"][0].Reason)
+	s.Equal("root.id", got.Breaks["app"][0].Property)
+
+	// Three records, one per dependency: users and auth deployable, catalog not.
+	s.Equal(3, s.countRows("compatibility_matrix"))
+
+	rows, err := s.Pool.Query(context.Background(),
+		`SELECT p.name, cm.deployable
+		   FROM compatibility_matrix cm
+		   JOIN participants p ON p.id = cm.counterpart_participant_id
+		  WHERE cm.version = 'v1'`)
+	s.Require().NoError(err)
+	defer rows.Close()
+
+	deployableByProvider := map[string]bool{}
+	for rows.Next() {
+		var name string
+		var deployable bool
+		s.Require().NoError(rows.Scan(&name, &deployable))
+		deployableByProvider[name] = deployable
+	}
+	s.Require().NoError(rows.Err())
+
+	s.Equal(map[string]bool{"users": true, "auth": true, "catalog": false}, deployableByProvider)
+}
