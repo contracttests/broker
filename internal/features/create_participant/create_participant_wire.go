@@ -1,11 +1,9 @@
 package create_participant
 
-type ParticipantMessage string
-
 const (
-	ParticipantCreated       ParticipantMessage = "participant created"
-	ParticipantInvalidInput  ParticipantMessage = "participant invalid input"
-	ParticipantAlreadyExists ParticipantMessage = "participant already exists"
+	ParticipantCreated       string = "participant created"
+	ParticipantInvalidInput  string = "participant invalid input"
+	ParticipantAlreadyExists string = "participant already exists"
 )
 
 type CreateParticipantResponse struct {

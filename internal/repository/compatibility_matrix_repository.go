@@ -27,13 +27,13 @@ func NewCompatibilityMatrixRepository(pool *pgxpool.Pool) *CompatibilityMatrixRe
 
 func (r *CompatibilityMatrixRepository) Insert(ctx context.Context, row *model.CompatibilityMatrix) {
 	var counterpartID sql.NullInt64
-	if row.CounterpartParticipantID != nil {
-		counterpartID = sql.NullInt64{Int64: *row.CounterpartParticipantID, Valid: true}
+	if row.CounterpartParticipantID != 0 {
+		counterpartID = sql.NullInt64{Int64: row.CounterpartParticipantID, Valid: true}
 	}
 
 	var counterpartVersion sql.NullString
-	if row.CounterpartVersion != nil {
-		counterpartVersion = sql.NullString{String: *row.CounterpartVersion, Valid: true}
+	if row.CounterpartVersion != "" {
+		counterpartVersion = sql.NullString{String: row.CounterpartVersion, Valid: true}
 	}
 
 	if err := r.pool.QueryRow(

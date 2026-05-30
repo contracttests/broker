@@ -5,50 +5,48 @@ import (
 	"strings"
 
 	"github.com/contracttesting/broker/internal/dsl"
+	"github.com/contracttesting/broker/internal/middleware"
 	"github.com/contracttesting/broker/internal/model"
 	"github.com/contracttesting/broker/internal/repository"
 	"github.com/gofiber/fiber/v3"
 )
 
 type PublishContractController struct {
-	contractRepository    *repository.ContractRepository
-	participantRepository *repository.ParticipantRepository
+	contractRepository *repository.ContractRepository
 }
 
 func NewPublishContractController(
 	contractRepository *repository.ContractRepository,
-	participantRepository *repository.ParticipantRepository,
 ) *PublishContractController {
 	return &PublishContractController{
-		contractRepository:    contractRepository,
-		participantRepository: participantRepository,
+		contractRepository: contractRepository,
 	}
 }
 
-func (ctr *PublishContractController) Handle(ctx fiber.Ctx) error {
-	participantName := strings.TrimSpace(ctx.Params("participant"))
-	version := strings.TrimSpace(ctx.Params("version"))
+type publishContractRequest struct {
+	Version  string          `json:"version"`
+	Contract json.RawMessage `json:"contract"`
+}
 
-	if participantName == "" || version == "" {
+func (ctr *PublishContractController) Handle(ctx fiber.Ctx) error {
+	request := &publishContractRequest{}
+	if err := json.Unmarshal(ctx.Body(), request); err != nil {
 		return ctr.respondInvalidInput(ctx)
 	}
 
-	body := ctx.Body()
-	if len(body) == 0 {
+	version := strings.TrimSpace(request.Version)
+	if version == "" || len(request.Contract) == 0 {
 		return ctr.respondInvalidInput(ctx)
 	}
 
 	dslContract := &dsl.Contract{}
-	if err := json.Unmarshal(body, dslContract); err != nil {
+	if err := json.Unmarshal(request.Contract, dslContract); err != nil {
 		return ctr.respondInvalidInput(ctx)
 	}
 
-	participant, ok := ctr.participantRepository.FindByName(ctx.Context(), participantName)
-	if !ok {
-		return ctr.respondParticipantNotFound(ctx)
-	}
+	participant := middleware.ParticipantFrom(ctx)
 
-	contract := model.NewContract(participant, version, string(body))
+	contract := model.NewContract(participant, version, string(request.Contract))
 	dslContract.HydrateContract(contract)
 
 	if existing, found := ctr.contractRepository.LoadChecksumForVersion(ctx.Context(), contract.ParticipantID(), version); found {
@@ -77,13 +75,6 @@ func (ctr *PublishContractController) respondInvalidInput(ctx fiber.Ctx) error {
 	return ctx.Status(fiber.StatusBadRequest).JSON(PublishContractOutput{
 		Success: false,
 		Message: ContractInvalidInput,
-	})
-}
-
-func (ctr *PublishContractController) respondParticipantNotFound(ctx fiber.Ctx) error {
-	return ctx.Status(fiber.StatusBadRequest).JSON(PublishContractOutput{
-		Success: false,
-		Message: ContractParticipantNotFound,
 	})
 }
 

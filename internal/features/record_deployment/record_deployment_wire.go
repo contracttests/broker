@@ -2,6 +2,7 @@ package record_deployment
 
 import (
 	"github.com/contracttesting/broker/internal/components"
+	"github.com/contracttesting/broker/internal/middleware"
 	"github.com/contracttesting/broker/internal/repository"
 )
 
@@ -11,12 +12,12 @@ func Register(components *components.Components) {
 	environmentRepository := repository.NewEnvironmentRepository(components.Pool)
 	deploymentRepository := repository.NewDeploymentRepository(components.Pool)
 
-	handler := NewRecordDeploymentHandler(
-		participantRepository,
-		contractRepository,
-		environmentRepository,
-		deploymentRepository,
-	)
+	handler := NewRecordDeploymentHandler(deploymentRepository)
 
-	components.Server.Post("/api/:participant/deployments", handler.Handle)
+	components.Server.Post("/api/deployments",
+		middleware.RequireParticipant(participantRepository, middleware.FromBody("name")),
+		middleware.RequireVersion(contractRepository, middleware.FromBody("version")),
+		middleware.RequireEnvironment(environmentRepository, middleware.FromBody("environment")),
+		handler.Handle,
+	)
 }

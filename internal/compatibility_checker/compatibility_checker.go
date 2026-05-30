@@ -47,6 +47,32 @@ type BreakingChange struct {
 	HumanReadable string          `json:"human_readable"`
 }
 
+type CompatibilityResult struct {
+	CounterpartParticipantID int64
+	CounterpartVersion       string
+	Deployable               bool
+}
+
+type CompatibilityReport struct {
+	Results []CompatibilityResult       `json:"results"`
+	Breaks  map[string][]BreakingChange `json:"breaks"`
+}
+
+func NewCompatibilityReport() *CompatibilityReport {
+	return &CompatibilityReport{
+		Results: make([]CompatibilityResult, 0),
+		Breaks:  make(map[string][]BreakingChange),
+	}
+}
+
+func (r *CompatibilityReport) Append(b BreakingChange) {
+	if r.Breaks == nil {
+		r.Breaks = make(map[string][]BreakingChange)
+	}
+
+	r.Breaks[b.LeftResource.ParticipantName()] = append(r.Breaks[b.LeftResource.ParticipantName()], b)
+}
+
 func NewBreakingChange(
 	leftResource *model.Resource,
 	rightResource *model.Resource,
@@ -131,14 +157,6 @@ type CompatibilityChecker struct {
 	repository *repository.ContractRepository
 }
 
-type CompatibilityReport struct {
-	Breaks []BreakingChange `json:"breaks"`
-}
-
-func (r *CompatibilityReport) Append(b BreakingChange) {
-	r.Breaks = append(r.Breaks, b)
-}
-
 func NewCompatibilityChecker(repository *repository.ContractRepository) *CompatibilityChecker {
 	return &CompatibilityChecker{
 		repository: repository,
@@ -150,7 +168,7 @@ func (c *CompatibilityChecker) Check(
 	uploaded *model.Contract,
 	environment *model.Environment,
 ) *CompatibilityReport {
-	report := &CompatibilityReport{}
+	report := NewCompatibilityReport()
 
 	for _, resource := range uploaded.Resources {
 		switch resource.Direction {
@@ -179,12 +197,23 @@ func (c *CompatibilityChecker) checkConsumer(
 			Reason:        ReasonProviderResourceNotFound,
 		})
 
+		report.Results = append(report.Results, CompatibilityResult{
+			Deployable: false,
+		})
+
 		return
 	}
 
-	for _, breakingChange := range checkResources(&consumer, &provider) {
+	breaks := checkResources(&consumer, &provider)
+	for _, breakingChange := range breaks {
 		report.Append(breakingChange)
 	}
+
+	report.Results = append(report.Results, CompatibilityResult{
+		CounterpartParticipantID: provider.ParticipantID(),
+		CounterpartVersion:       provider.Version,
+		Deployable:               len(breaks) == 0,
+	})
 }
 
 func (c *CompatibilityChecker) checkProvider(
@@ -196,9 +225,16 @@ func (c *CompatibilityChecker) checkProvider(
 	consumers := c.repository.FindConsumersOfProviderAndEnvironment(ctx, provider, environment)
 
 	for _, consumer := range consumers {
-		for _, breakingChange := range checkResources(&consumer, &provider) {
+		consumerBreaks := checkResources(&consumer, &provider)
+		for _, breakingChange := range consumerBreaks {
 			report.Append(breakingChange)
 		}
+
+		report.Results = append(report.Results, CompatibilityResult{
+			CounterpartParticipantID: consumer.ParticipantID(),
+			CounterpartVersion:       consumer.Version,
+			Deployable:               len(consumerBreaks) == 0,
+		})
 	}
 }
 
@@ -213,10 +249,12 @@ func checkResources(leftResource *model.Resource, rightResource *model.Resource)
 
 func checkResponseResource(leftResource *model.Resource, rightResource *model.Resource) []BreakingChange {
 	var breaks []BreakingChange
+
 	for consumerPropertyPath, consumerProperty := range leftResource.Properties {
 		providerProperty, propertyExists := rightResource.Properties[consumerPropertyPath]
 
-		if !propertyExists {
+		// If the property is not present in the provider and is required in the consumer, it is a breaking change.
+		if !propertyExists && !consumerProperty.Optional {
 			breaks = append(breaks, NewBreakingChange(
 				leftResource,
 				rightResource,
@@ -227,6 +265,7 @@ func checkResponseResource(leftResource *model.Resource, rightResource *model.Re
 			continue
 		}
 
+		// If the property is present in the provider and the type is different, it is a breaking change.
 		if consumerProperty.Type != providerProperty.Type {
 			breaks = append(breaks, NewBreakingChange(
 				leftResource,
@@ -238,6 +277,7 @@ func checkResponseResource(leftResource *model.Resource, rightResource *model.Re
 			continue
 		}
 
+		// If the property is required in the consumer and is optional in the provider, it is a breaking change.
 		if !consumerProperty.Optional && providerProperty.Optional {
 			breaks = append(breaks, NewBreakingChange(
 				leftResource,
@@ -253,21 +293,22 @@ func checkResponseResource(leftResource *model.Resource, rightResource *model.Re
 
 func checkRequestResource(leftResource *model.Resource, rightResource *model.Resource) []BreakingChange {
 	var breaks []BreakingChange
+
 	for providerPropertyPath, providerProperty := range rightResource.Properties {
 		consumerProperty, propertyExists := leftResource.Properties[providerPropertyPath]
-		if !propertyExists {
-			if !providerProperty.Optional {
-				breaks = append(breaks, NewBreakingChange(
-					leftResource,
-					rightResource,
-					ReasonMissingInConsumer,
-					providerPropertyPath,
-				))
-			}
+		// If the property is not present in the consumer and is not optional, it is a breaking change.
+		if !propertyExists && !providerProperty.Optional {
+			breaks = append(breaks, NewBreakingChange(
+				leftResource,
+				rightResource,
+				ReasonMissingInConsumer,
+				providerPropertyPath,
+			))
 
 			continue
 		}
 
+		// If the property is present in the consumer and the type is different, it is a breaking change.
 		if consumerProperty.Type != providerProperty.Type {
 			breaks = append(breaks, NewBreakingChange(
 				leftResource,
@@ -279,6 +320,7 @@ func checkRequestResource(leftResource *model.Resource, rightResource *model.Res
 			continue
 		}
 
+		// If the property is required in the provider and is optional in the consumer, it is a breaking change.
 		if !providerProperty.Optional && consumerProperty.Optional {
 			breaks = append(breaks, NewBreakingChange(
 				leftResource,

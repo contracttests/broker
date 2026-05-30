@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 )
@@ -89,38 +90,42 @@ func (s *IntegrationSuite) TestCanIDeploy_HappyPath() {
 	status, _ := s.post("/api/participants", `{"name":"api"}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/contracts/v1", apiV1ProviderContract)
+	status, _ = s.post("/api/contracts", `{"name":"api","version":"v1","contract":`+apiV1ProviderContract+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
 	status, _ = s.post("/api/environments", `{"name":"production"}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/deployments", `{"version":"v1","environment":"production"}`)
+	status, _ = s.post("/api/deployments", `{"name":"api","version":"v1","environment":"production"}`)
 	s.Require().Equal(http.StatusOK, status)
 
 	status, _ = s.post("/api/participants", `{"name":"front"}`)
 	s.Require().Equal(http.StatusOK, status)
 
 	// front@v1 consumes only "id", which api@v1 provides: it is deployable.
-	status, _ = s.post("/api/front/contracts/v1", frontV1ConsumerContract)
+	status, _ = s.post("/api/contracts", `{"name":"front","version":"v1","contract":`+frontV1ConsumerContract+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.get("/api/front/can-i-deploy?environment=production&version=v1")
+	status, body := s.post("/api/can-i-deploy", `{"name":"front","version":"v1","environment":"production"}`)
 	s.Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"deployable":true}`, body)
 
-	// A deployable decision is persisted in the compatibility matrix.
+	// A compatible decision is persisted as a deployable row.
 	s.Equal(1, s.countRows("compatibility_matrix"))
+	var v1Deployable bool
+	s.Require().NoError(s.Pool.QueryRow(context.Background(),
+		`SELECT deployable FROM compatibility_matrix WHERE version = 'v1'`).Scan(&v1Deployable))
+	s.True(v1Deployable)
 
-	status, _ = s.post("/api/front/deployments", `{"version":"v1","environment":"production"}`)
+	status, _ = s.post("/api/deployments", `{"name":"front","version":"v1","environment":"production"}`)
 	s.Require().Equal(http.StatusOK, status)
 
 	// front@v2 is incompatible with api@v1 on two counts, so it is not deployable
 	// and the response carries the breaking changes.
-	status, _ = s.post("/api/front/contracts/v2", frontV2ConsumerContract)
+	status, _ = s.post("/api/contracts", `{"name":"front","version":"v2","contract":`+frontV2ConsumerContract+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body = s.get("/api/front/can-i-deploy?environment=production&version=v2")
+	status, body = s.post("/api/can-i-deploy", `{"name":"front","version":"v2","environment":"production"}`)
 	s.Equal(http.StatusOK, status)
 
 	type brokenResource struct {
@@ -141,9 +146,9 @@ func (s *IntegrationSuite) TestCanIDeploy_HappyPath() {
 	}
 
 	var got struct {
-		Success    bool        `json:"success"`
-		Deployable bool        `json:"deployable"`
-		Breaks     []breakItem `json:"breaks"`
+		Success    bool                   `json:"success"`
+		Deployable bool                   `json:"deployable"`
+		Breaks     map[string][]breakItem `json:"breaks"`
 	}
 
 	s.Require().NoError(json.Unmarshal([]byte(body), &got))
@@ -184,8 +189,12 @@ func (s *IntegrationSuite) TestCanIDeploy_HappyPath() {
 			Property:      "root.name",
 			HumanReadable: "Property root.name is missing in provider api",
 		},
-	}, got.Breaks)
+	}, got.Breaks["front"])
 
-	// A non-deployable decision is not persisted: the matrix still holds only v1.
-	s.Equal(1, s.countRows("compatibility_matrix"))
+	// The incompatible decision is persisted too, as a non-deployable row.
+	s.Equal(2, s.countRows("compatibility_matrix"))
+	var v2Deployable bool
+	s.Require().NoError(s.Pool.QueryRow(context.Background(),
+		`SELECT deployable FROM compatibility_matrix WHERE version = 'v2'`).Scan(&v2Deployable))
+	s.False(v2Deployable)
 }

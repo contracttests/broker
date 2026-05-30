@@ -1,12 +1,9 @@
 package rename_participant
 
-type ParticipantMessage string
-
 const (
-	ParticipantRenamed       ParticipantMessage = "participant renamed"
-	ParticipantInvalidInput  ParticipantMessage = "participant invalid input"
-	ParticipantAlreadyExists ParticipantMessage = "participant already exists"
-	ParticipantNotFound      ParticipantMessage = "participant not found"
+	ParticipantRenamed       string = "participant renamed"
+	ParticipantInvalidInput  string = "participant invalid input"
+	ParticipantAlreadyExists string = "participant already exists"
 )
 
 type RenameParticipantResponse struct {

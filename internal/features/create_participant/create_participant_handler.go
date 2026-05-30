@@ -44,13 +44,13 @@ func (ctr *CreateParticipantHandler) Handle(ctx fiber.Ctx) error {
 func (ctr *CreateParticipantHandler) respondInvalidInput(ctx fiber.Ctx) error {
 	return ctx.Status(fiber.StatusBadRequest).JSON(CreateParticipantResponse{
 		Success: false,
-		Message: string(ParticipantInvalidInput),
+		Message: ParticipantInvalidInput,
 	})
 }
 
 func (ctr *CreateParticipantHandler) respondAlreadyExists(ctx fiber.Ctx) error {
 	return ctx.Status(fiber.StatusBadRequest).JSON(CreateParticipantResponse{
 		Success: false,
-		Message: string(ParticipantAlreadyExists),
+		Message: ParticipantAlreadyExists,
 	})
 }

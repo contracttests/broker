@@ -3,6 +3,7 @@ package can_i_deploy
 import (
 	"github.com/contracttesting/broker/internal/compatibility_checker"
 	"github.com/contracttesting/broker/internal/components"
+	"github.com/contracttesting/broker/internal/middleware"
 	"github.com/contracttesting/broker/internal/repository"
 )
 
@@ -14,12 +15,15 @@ func Register(components *components.Components) {
 	environmentRepository := repository.NewEnvironmentRepository(components.Pool)
 
 	handler := NewCanIDeployHandler(
-		participantRepository,
 		contractRepository,
 		compatibilityMatrixRepository,
-		environmentRepository,
 		compatibilityChecker,
 	)
 
-	components.Server.Get("/api/:participant/can-i-deploy", handler.Handle)
+	components.Server.Post("/api/can-i-deploy",
+		middleware.RequireParticipant(participantRepository, middleware.FromBody("name")),
+		middleware.RequireVersion(contractRepository, middleware.FromBody("version")),
+		middleware.RequireEnvironment(environmentRepository, middleware.FromBody("environment")),
+		handler.Handle,
+	)
 }

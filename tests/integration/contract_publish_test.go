@@ -55,7 +55,7 @@ func (s *IntegrationSuite) TestHappyPath_PublishContract() {
 	status, _ := s.post("/api/participants", petsParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/pets-service/contracts/1", contractBody)
+	status, body := s.post("/api/contracts", `{"name":"pets-service","version":"1","contract":`+contractBody+`}`)
 	s.Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"contract publish successful"}`, body)
 
@@ -75,10 +75,10 @@ func (s *IntegrationSuite) TestPublish_SameVersionSameContent_Returns200NoNewRow
 	status, _ := s.post("/api/participants", petsParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/pets-service/contracts/1", contractBody)
+	status, _ = s.post("/api/contracts", `{"name":"pets-service","version":"1","contract":`+contractBody+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/pets-service/contracts/1", contractBody)
+	status, body := s.post("/api/contracts", `{"name":"pets-service","version":"1","contract":`+contractBody+`}`)
 	s.Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"contract publish successful"}`, body)
 
@@ -89,21 +89,21 @@ func (s *IntegrationSuite) TestPublish_SameVersionDifferentContent_Returns409() 
 	status, _ := s.post("/api/participants", petsParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/pets-service/contracts/1", contractBody)
+	status, _ = s.post("/api/contracts", `{"name":"pets-service","version":"1","contract":`+contractBody+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/pets-service/contracts/1", contractBodyAlt)
+	status, body := s.post("/api/contracts", `{"name":"pets-service","version":"1","contract":`+contractBodyAlt+`}`)
 	s.Equal(http.StatusConflict, status)
 	s.JSONEq(`{"success":false,"message":"contract version already exists with different content"}`, body)
 
 	s.Equal(1, s.countRows("contracts"))
 }
 
-func (s *IntegrationSuite) TestPublishContract_EmptyBody() {
+func (s *IntegrationSuite) TestPublishContract_MissingContract() {
 	status, _ := s.post("/api/participants", petsParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/pets-service/contracts/a1b2c3d", "")
+	status, body := s.post("/api/contracts", `{"name":"pets-service","version":"a1b2c3d"}`)
 	s.Equal(http.StatusBadRequest, status)
 	s.JSONEq(`{"success":false,"message":"contract invalid input"}`, body)
 }
@@ -112,7 +112,7 @@ func (s *IntegrationSuite) TestPublishContract_CommitHashVersion() {
 	status, _ := s.post("/api/participants", petsParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/pets-service/contracts/a1b2c3d4e5f6", contractBody)
+	status, body := s.post("/api/contracts", `{"name":"pets-service","version":"a1b2c3d4e5f6","contract":`+contractBody+`}`)
 	s.Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"contract publish successful"}`, body)
 
@@ -125,7 +125,7 @@ func (s *IntegrationSuite) TestPublishContract_CommitHashVersion() {
 }
 
 func (s *IntegrationSuite) TestPublishContract_UnknownParticipant() {
-	status, body := s.post("/api/ghost-service/contracts/1", contractBody)
+	status, body := s.post("/api/contracts", `{"name":"ghost-service","version":"1","contract":`+contractBody+`}`)
 	s.Equal(http.StatusBadRequest, status)
 	s.JSONEq(`{"success":false,"message":"participant not found"}`, body)
 }

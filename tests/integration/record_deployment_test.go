@@ -7,7 +7,8 @@ import (
 
 const (
 	apiParticipantBody         = `{"name":"api"}`
-	apiV1DeploymentBody        = `{"version":"v1","environment":"production"}`
+	apiV1DeploymentBody        = `{"name":"api","version":"v1","environment":"production"}`
+	apiV2DeploymentBody        = `{"name":"api","version":"v2","environment":"production"}`
 	productionEnvBodyForDeploy = `{"name":"production"}`
 )
 
@@ -58,13 +59,11 @@ const apiV2ContractBody = `
   }
 }`
 
-const apiV2DeploymentBody = `{"version":"v2","environment":"production"}`
-
 func (s *IntegrationSuite) seedApiParticipantContractAndProductionEnv() {
 	status, _ := s.post("/api/participants", apiParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/contracts/v1", apiV1ContractBody)
+	status, _ = s.post("/api/contracts", `{"name":"api","version":"v1","contract":`+apiV1ContractBody+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
 	status, _ = s.post("/api/environments", productionEnvBodyForDeploy)
@@ -74,7 +73,7 @@ func (s *IntegrationSuite) seedApiParticipantContractAndProductionEnv() {
 func (s *IntegrationSuite) TestRecordDeployment_Success() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments", apiV1DeploymentBody)
+	status, body := s.post("/api/deployments", apiV1DeploymentBody)
 	s.Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"deployment recorded"}`, body)
 
@@ -99,11 +98,11 @@ func (s *IntegrationSuite) TestRecordDeployment_Success() {
 func (s *IntegrationSuite) TestRecordDeployment_TwiceSameTupleIsIdempotent() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments", apiV1DeploymentBody)
+	status, body := s.post("/api/deployments", apiV1DeploymentBody)
 	s.Require().Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"deployment recorded"}`, body)
 
-	status, body = s.post("/api/api/deployments", apiV1DeploymentBody)
+	status, body = s.post("/api/deployments", apiV1DeploymentBody)
 	s.Require().Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"deployment recorded"}`, body)
 
@@ -128,22 +127,22 @@ func (s *IntegrationSuite) TestRecordDeployment_RollbackWritesNewRow() {
 	status, _ := s.post("/api/participants", apiParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/contracts/v1", apiV1ContractBody)
+	status, _ = s.post("/api/contracts", `{"name":"api","version":"v1","contract":`+apiV1ContractBody+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/contracts/v2", apiV2ContractBody)
+	status, _ = s.post("/api/contracts", `{"name":"api","version":"v2","contract":`+apiV2ContractBody+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
 	status, _ = s.post("/api/environments", productionEnvBodyForDeploy)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/deployments", apiV1DeploymentBody)
+	status, _ = s.post("/api/deployments", apiV1DeploymentBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/deployments", apiV2DeploymentBody)
+	status, _ = s.post("/api/deployments", apiV2DeploymentBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/deployments", apiV1DeploymentBody)
+	status, _ = s.post("/api/deployments", apiV1DeploymentBody)
 	s.Require().Equal(http.StatusOK, status)
 
 	s.Equal(3, s.countRows("deployments"))
@@ -173,9 +172,9 @@ func (s *IntegrationSuite) TestRecordDeployment_RollbackWritesNewRow() {
 func (s *IntegrationSuite) TestRecordDeployment_MalformedJSONReturns400() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments", `{`)
+	status, body := s.post("/api/deployments", `{`)
 	s.Equal(http.StatusBadRequest, status)
-	s.JSONEq(`{"success":false,"message":"deployment invalid input"}`, body)
+	s.JSONEq(`{"success":false,"message":"participant is required"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
 }
@@ -183,9 +182,9 @@ func (s *IntegrationSuite) TestRecordDeployment_MalformedJSONReturns400() {
 func (s *IntegrationSuite) TestRecordDeployment_MissingVersionReturns400() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments", `{"environment":"production"}`)
+	status, body := s.post("/api/deployments", `{"name":"api","environment":"production"}`)
 	s.Equal(http.StatusBadRequest, status)
-	s.JSONEq(`{"success":false,"message":"deployment invalid input"}`, body)
+	s.JSONEq(`{"success":false,"message":"version is required"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
 }
@@ -193,9 +192,9 @@ func (s *IntegrationSuite) TestRecordDeployment_MissingVersionReturns400() {
 func (s *IntegrationSuite) TestRecordDeployment_MissingEnvironmentReturns400() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments", `{"version":"v1"}`)
+	status, body := s.post("/api/deployments", `{"name":"api","version":"v1"}`)
 	s.Equal(http.StatusBadRequest, status)
-	s.JSONEq(`{"success":false,"message":"deployment invalid input"}`, body)
+	s.JSONEq(`{"success":false,"message":"environment is required"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
 }
@@ -203,44 +202,44 @@ func (s *IntegrationSuite) TestRecordDeployment_MissingEnvironmentReturns400() {
 func (s *IntegrationSuite) TestRecordDeployment_EmptyVersionReturns400() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments", `{"version":"","environment":"production"}`)
+	status, body := s.post("/api/deployments", `{"name":"api","version":"","environment":"production"}`)
 	s.Equal(http.StatusBadRequest, status)
-	s.JSONEq(`{"success":false,"message":"deployment invalid input"}`, body)
+	s.JSONEq(`{"success":false,"message":"version is required"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
 }
 
-func (s *IntegrationSuite) TestRecordDeployment_UnknownParticipantReturns404() {
-	status, body := s.post("/api/unknown/deployments", apiV1DeploymentBody)
-	s.Equal(http.StatusNotFound, status)
+func (s *IntegrationSuite) TestRecordDeployment_UnknownParticipantReturns400() {
+	status, body := s.post("/api/deployments", `{"name":"unknown","version":"v1","environment":"production"}`)
+	s.Equal(http.StatusBadRequest, status)
 	s.JSONEq(`{"success":false,"message":"participant not found"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
 }
 
-func (s *IntegrationSuite) TestRecordDeployment_UnpublishedVersionReturns422() {
+func (s *IntegrationSuite) TestRecordDeployment_UnpublishedVersionReturns400() {
 	status, _ := s.post("/api/participants", apiParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
 	status, _ = s.post("/api/environments", productionEnvBodyForDeploy)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/api/deployments", apiV1DeploymentBody)
-	s.Equal(http.StatusUnprocessableEntity, status)
-	s.JSONEq(`{"success":false,"message":"version not published"}`, body)
+	status, body := s.post("/api/deployments", apiV1DeploymentBody)
+	s.Equal(http.StatusBadRequest, status)
+	s.JSONEq(`{"success":false,"message":"version not found"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
 }
 
-func (s *IntegrationSuite) TestRecordDeployment_UnknownEnvironmentReturns422() {
+func (s *IntegrationSuite) TestRecordDeployment_UnknownEnvironmentReturns400() {
 	status, _ := s.post("/api/participants", apiParticipantBody)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, _ = s.post("/api/api/contracts/v1", apiV1ContractBody)
+	status, _ = s.post("/api/contracts", `{"name":"api","version":"v1","contract":`+apiV1ContractBody+`}`)
 	s.Require().Equal(http.StatusOK, status)
 
-	status, body := s.post("/api/api/deployments", apiV1DeploymentBody)
-	s.Equal(http.StatusUnprocessableEntity, status)
+	status, body := s.post("/api/deployments", apiV1DeploymentBody)
+	s.Equal(http.StatusBadRequest, status)
 	s.JSONEq(`{"success":false,"message":"environment not found"}`, body)
 
 	s.Equal(0, s.countRows("deployments"))
@@ -249,8 +248,8 @@ func (s *IntegrationSuite) TestRecordDeployment_UnknownEnvironmentReturns422() {
 func (s *IntegrationSuite) TestRecordDeployment_ExtraFieldsIgnored() {
 	s.seedApiParticipantContractAndProductionEnv()
 
-	status, body := s.post("/api/api/deployments",
-		`{"version":"v1","environment":"production","deployer":"alice"}`)
+	status, body := s.post("/api/deployments",
+		`{"name":"api","version":"v1","environment":"production","deployer":"alice"}`)
 	s.Equal(http.StatusOK, status)
 	s.JSONEq(`{"success":true,"message":"deployment recorded"}`, body)
 

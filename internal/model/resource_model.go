@@ -36,6 +36,7 @@ type Resource struct {
 	Method      string              `json:"method"`
 	StatusCode  string              `json:"status_code"`
 	Properties  map[string]Property `json:"-"`
+	Version     string              `json:"version"`
 	Participant *Participant        `json:"-"`
 }
 
